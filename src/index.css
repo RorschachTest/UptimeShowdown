@@ -1,0 +1,99 @@
+@import 'tailwindcss';
+@import '@xyflow/react/dist/style.css';
+
+@theme {
+  --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+
+  --color-board: #e6eaee;
+  --color-board-dot: #c3cbd3;
+  --color-panel: #f6f8f9;
+  --color-piece: #ffffff;
+  --color-ink: #1d2733;
+  --color-ink-soft: #5b6775;
+  --color-ink-faint: #9aa5b1;
+
+  --color-ok: #2e9e6b;
+  --color-warn: #e0a526;
+  --color-bad: #d6443a;
+
+  --color-read: #2f6fde;
+  --color-write: #e07b24;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-board);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Game pieces: hard offset shadow, like a token sitting on the board.
+   In the components layer so utilities like bg-ink can override it. */
+@layer components {
+  .piece {
+    background: var(--color-piece);
+    border: 2px solid var(--color-ink);
+    border-radius: 10px;
+    box-shadow: 3px 4px 0 var(--color-ink);
+  }
+}
+
+@keyframes drop-flash {
+  0%,
+  100% {
+    box-shadow: 3px 4px 0 var(--color-ink);
+  }
+  50% {
+    box-shadow:
+      3px 4px 0 var(--color-ink),
+      0 0 0 6px color-mix(in srgb, var(--color-bad) 35%, transparent);
+  }
+}
+
+.piece-dropping {
+  animation: drop-flash 0.6s ease-in-out infinite;
+}
+
+/* React Flow overrides */
+.react-flow {
+  --xy-background-color: var(--color-board);
+  --xy-edge-stroke: var(--color-ink);
+  --xy-edge-stroke-width: 2;
+  --xy-connectionline-stroke: var(--color-ink-soft);
+  --xy-connectionline-stroke-width: 2;
+}
+
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-piece);
+  border: 2px solid var(--color-ink);
+}
+
+.react-flow__handle:hover {
+  background: var(--color-ink);
+}
+
+.react-flow__node:focus-visible {
+  outline: 2px solid var(--color-read);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-dot {
+    display: none;
+  }
+  .piece-dropping {
+    animation: none;
+    outline: 3px solid var(--color-bad);
+  }
+}
