@@ -6,7 +6,7 @@ Phase 1 is a single-player sandbox. Everything is mouse-only: drag, click, scrol
 
 ## Run it
 
-Requires Node 20 or later.
+Requires Node 24 (see `.nvmrc`).
 
 ```bash
 npm install
