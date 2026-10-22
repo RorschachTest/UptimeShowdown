@@ -1,0 +1,9 @@
+# The game served by nginx. Published at https://uptimeshowdown.aiwroteit.dev by the
+# host's cloudflared system service (see "Public access" in README.md).
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    # Host-only port; cloudflared on the host reaches it, nothing else does.
+    ports:
+      - "127.0.0.1:8088:80"

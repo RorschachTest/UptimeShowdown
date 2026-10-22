@@ -15,6 +15,19 @@ npm run dev
 
 Then open http://localhost:5173.
 
+## Public access (Docker + Cloudflare Tunnel)
+
+The game is published at https://uptimeshowdown.aiwroteit.dev. Docker serves the built site with nginx on `127.0.0.1:8088`; the machine's `cloudflared` system service forwards the hostname to that port. That service runs the shared **dev-home** tunnel, which also serves other projects on this machine (e.g. memeclip). No router ports are open and HTTPS is Cloudflare's.
+
+1. Cloudflare dashboard, **Networking > Tunnels > dev-home > Routes > Add route > Published application**: `uptimeshowdown` . `aiwroteit.dev`, service URL `http://localhost:8088`. The dashboard creates the DNS record.
+2. Start the site, and rebuild after pulling changes:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+There is no Access policy on this hostname, so the game is public. Logs for the tunnel: `/Library/Logs/com.cloudflare.cloudflared.err.log`.
+
 ## Scripts
 
 | Command | What it does |
