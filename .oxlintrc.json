@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  },
+  "overrides": [
+    {
+      "files": ["src/engine/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["react", "react-*", "@xyflow/*", "zustand", "zustand/*", "../*"],
+                "message": "src/engine must stay framework-free so it can run on a Node server (DECISIONS D10)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

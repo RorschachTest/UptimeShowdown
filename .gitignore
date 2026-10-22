@@ -1,0 +1,22 @@
+# Local design docs (never commit)
+docs/SPEC.md
+docs/DECISIONS.md
+docs/*.docx
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Env and editor
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Local Claude Code launch config (machine-specific paths)
+.claude/
