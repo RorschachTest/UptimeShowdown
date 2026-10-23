@@ -21,6 +21,28 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4.5 5.5v13c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5v-13M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
     </>
   ),
+  allinone: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 7h8M8 11h8M8 15h3M15.5 15.5h.01" />
+    </>
+  ),
+  lb: (
+    <>
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="19" cy="5" r="2" />
+      <circle cx="19" cy="12" r="2" />
+      <circle cx="19" cy="19" r="2" />
+      <path d="M7 12h10M7 11l10-5.5M7 13l10 5.5" />
+    </>
+  ),
+  cache: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />,
+  cdn: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.5 2.3 3.5 5.2 3.5 8.5s-1 6.2-3.5 8.5c-2.5-2.3-3.5-5.2-3.5-8.5s1-6.2 3.5-8.5Z" />
+    </>
+  ),
 }
 
 export function ComponentIcon({ kind, className = 'size-5' }: { kind: ComponentKind; className?: string }) {

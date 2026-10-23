@@ -1,14 +1,14 @@
 import type { Edge, Node } from '@xyflow/react'
-import type { ComponentKind, Graph } from '../engine/types'
+import type { ComponentKind, Graph, NodeConfig } from '../engine/types'
 
-export type GameNodeData = { kind: ComponentKind; instances: number }
+export type GameNodeData = { kind: ComponentKind; instances: number; config: NodeConfig }
 export type GameNode = Node<GameNodeData>
 
 /** React Flow state → the engine's plain graph (positions and UI flags stay behind). */
 export function toSimGraph(nodes: GameNode[], edges: Edge[]): Graph {
   return {
-    nodes: nodes.map((n) => ({ id: n.id, kind: n.data.kind, instances: n.data.instances })),
-    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, mode: 'sync' })),
+    nodes: nodes.map((n) => ({ id: n.id, kind: n.data.kind, instances: n.data.instances, config: n.data.config })),
+    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
   }
 }
 

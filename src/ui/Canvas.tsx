@@ -27,7 +27,7 @@ const edgeTypes: EdgeTypes = { flow: FlowEdge }
 const defaultEdgeOptions = { type: 'flow', markerEnd: { type: MarkerType.ArrowClosed, color: '#1d2733' } }
 
 /** Half a piece, so a dropped piece lands centred on the cursor. */
-const DROP_OFFSET = { x: 96, y: 45 }
+const DROP_OFFSET = { x: 104, y: 45 }
 
 function isComponentKind(value: string): value is ComponentKind {
   return value in COMPONENTS && value !== 'traffic'
@@ -110,8 +110,7 @@ export function Canvas() {
 
       {onlySource && (
         <div className="pointer-events-none absolute top-6 left-1/2 max-w-sm -translate-x-1/2 rounded-xl border-2 border-dashed border-ink-faint bg-panel/90 px-4 py-3 text-center text-sm text-ink-soft">
-          Drag an App Server and a SQL Database onto the board, then wire Users → App Server → SQL Database and press
-          Play.
+          Drag a piece from the left onto the board, pull a wire from Users to it, then press Play.
         </div>
       )}
 
