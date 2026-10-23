@@ -205,3 +205,66 @@ export interface InterviewLevel {
   /** Level-defined wrap-up questions (the bottleneck question is generated from the run). */
   wrapUp: WrapUpQuestion[]
 }
+
+// ── Estimate levels (Chapter 2) ──
+
+/** Units as exponents of base units: views/user/day = { view: 1, user: -1, day: -1 }. */
+export type UnitMap = Record<string, number>
+
+export interface NumberCard {
+  id: string
+  /** What the card says, e.g. "10M daily users". */
+  label: string
+  value: number
+  unit: UnitMap
+}
+
+export interface PickQuestion {
+  kind: 'pick'
+  id: string
+  prompt: string
+  options: { id: string; label: string; correct: boolean }[]
+  explain: string
+}
+
+export interface OrderQuestion {
+  kind: 'order'
+  id: string
+  prompt: string
+  /** Sorted by `value`, smallest first, to grade. */
+  items: { id: string; label: string; value: number }[]
+  explain: string
+}
+
+export interface EquationQuestion {
+  kind: 'equation'
+  id: string
+  prompt: string
+  cards: NumberCard[]
+  answer: number
+  unit: UnitMap
+  explain: string
+}
+
+export type EstimateQuestion = PickQuestion | OrderQuestion | EquationQuestion
+
+/** One term in an equation strip: a card, multiplied or divided into the running result. */
+export interface EquationStep {
+  cardId: string
+  op: 'mul' | 'div'
+}
+
+export type EstimateAnswer = { kind: 'pick'; optionId: string } | { kind: 'order'; ids: string[] } | { kind: 'equation'; steps: EquationStep[] }
+
+export interface EstimateStage {
+  id: string
+  title: string
+  story: string
+  questions: EstimateQuestion[]
+}
+
+export interface EstimateLevel {
+  id: string
+  title: string
+  stages: EstimateStage[]
+}

@@ -47,6 +47,8 @@ export function HUD() {
   const started = sim.tick > 0
   const finished = metrics.successRps + metrics.errorRps > 0
   const showStale = (stage.mix.ryw ?? 0) > 0
+  // Chapter 2 has no board: only the title and chapter picker apply.
+  const estimating = useGameStore((s) => s.estimate !== null)
 
   return (
     <header className="flex flex-wrap items-center gap-x-7 gap-y-3 border-b-2 border-ink bg-panel px-5 py-3">
@@ -68,6 +70,8 @@ export function HUD() {
         </div>
       </div>
 
+      {!estimating && (
+        <>
       <div className="flex items-center gap-5" aria-live="polite">
         <Stat label="Traffic" value={`${fmtInt(metrics.rps)} rps`} />
         <Stat
@@ -155,6 +159,8 @@ export function HUD() {
           Reset
         </button>
       </div>
+        </>
+      )}
     </header>
   )
 }

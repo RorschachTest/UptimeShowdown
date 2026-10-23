@@ -13,6 +13,7 @@ import { COMPONENTS, DEFAULT_CONFIG } from './engine/components'
 import { stageResult, type StageResult } from './engine/scoring'
 import { initSim, stageFinished, step, withGraph } from './engine/simulator'
 import type { Chapter, ComponentKind, NodeConfig, SimState } from './engine/types'
+import { createEstimateSlice, freshEstimate, type EstimateSlice } from './estimateSlice'
 import { afterRun, createInterviewSlice, freshInterview, type InterviewSlice } from './interviewSlice'
 import { LEVELS, type LevelId } from './levels'
 import { chapter1 } from './levels/chapter1'
@@ -20,7 +21,7 @@ import { toSimGraph, type GameNode } from './ui/graph'
 
 export type Speed = 1 | 2 | 4
 
-export interface GameStore extends InterviewSlice {
+export interface GameStore extends InterviewSlice, EstimateSlice {
   levelId: LevelId
   chapter: Chapter
   stageIndex: number
@@ -81,6 +82,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
   return {
     ...createInterviewSlice(set, get),
+    ...createEstimateSlice(set, get),
     levelId: 'ch1',
     chapter: chapter1,
     stageIndex: 0,
@@ -196,7 +198,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     openLevel: (id) => {
       const entry = LEVELS.find((l) => l.id === id)!
-      const chapter = entry.kind === 'ladder' ? entry.chapter : entry.level.chapter
+      // Estimate levels have no board; keep a harmless chapter loaded behind them.
+      const chapter = entry.kind === 'ladder' ? entry.chapter : entry.kind === 'interview' ? entry.level.chapter : chapter1
       set({
         levelId: id,
         chapter,
@@ -208,6 +211,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
         running: false,
         result: null,
         interview: entry.kind === 'interview' ? freshInterview(entry.level) : null,
+        estimate: entry.kind === 'estimate' ? freshEstimate(entry.level) : null,
       })
     },
   }
