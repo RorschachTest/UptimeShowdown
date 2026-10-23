@@ -6,9 +6,11 @@ export const lb = defineComponent({
   blurb: 'One address in front of many web servers.',
   solves: 'Spreads traffic and routes around a crashed server.',
   worsens: 'Another hop and another bill. Pointless with only one server behind it.',
-  capacityRps: 20_000,
+  // A managed L4 balancer handles far more than any single backend.
+  capacityRps: 100_000,
   baseLatencyMs: 2,
   costPerMin: 15,
   serves: [],
   bound: 'network',
+  balances: true,
 })

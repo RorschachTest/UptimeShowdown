@@ -67,7 +67,7 @@ export function InterviewBar() {
 
       {iv.phase !== 'scope' && (
         <ul className="flex flex-wrap gap-1.5" aria-label="What you know">
-          {(Object.keys(FACT_LABELS) as FactId[]).map((f) => (
+          {[...new Set(iv.level.questions.flatMap((q) => q.reveals))].map((f: FactId) => (
             <FactChip key={f} id={f} />
           ))}
         </ul>

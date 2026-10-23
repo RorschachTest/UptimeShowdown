@@ -1,5 +1,6 @@
-import { COMPONENTS, hitRate, serves, tierMult, type Served, type ServeContext } from './components'
-import { addFlow, EPSILON, flowKey, parseKey, TICK_MS, TICKS_PER_SEC } from './flows'
+import { COMPONENTS, hitRate, serves, type ServeContext } from './components'
+import { addFlow, EPSILON, flowKey, parseKey, TICKS_PER_SEC } from './flows'
+import { serveGeneric } from './serve'
 import { addStats, bucketIndex, emptyStats } from './scoring'
 import type { Capability, Chapter, ComponentKind, Flows, Graph, NodeRuntime, NodeTickStats, SimEdge, SimNode, SimState, Stage, TickStats } from './types'
 
@@ -57,7 +58,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
     if (!src || !byId.has(e.target) || e.source === e.target) continue
     outEdges[e.source]!.push(e)
     indegree[e.target]! += 1
-    if (src.kind === 'lb') lbFed[e.target] = true
+    if (COMPONENTS[src.kind].balances) lbFed[e.target] = true
   }
   const ready = graph.nodes.filter((n) => indegree[n.id] === 0).map((n) => n.id)
   const order: string[] = []
@@ -116,47 +117,11 @@ export function stageFinished(state: SimState): boolean {
   return state.tick >= currentStage(state).durationS * TICKS_PER_SEC
 }
 
-/** Default serving model: one capacity pool in weighted units, with an optional backlog. */
-function serveGeneric(node: SimNode, { instances, inflow, backlog }: ServeContext, weights: number[]): Served {
-  const def = COMPONENTS[node.kind]
-  const capTick = (def.capacityRps * instances * tierMult(def, node.config.tier)) / TICKS_PER_SEC
-  const units = (f: Flows) => Object.entries(f).reduce((s, [k, p]) => s + p.count * (weights[parseKey(k)[0]] ?? 1), 0)
-
-  const all: Flows = {}
-  for (const [k, p] of Object.entries(backlog)) addFlow(all, k, p.count, p.latencyMs)
-  for (const [k, p] of Object.entries(inflow)) addFlow(all, k, p.count, p.latencyMs)
-
-  const demand = units(all) / capTick
-  const serveScale = demand > def.maxUtil ? def.maxUtil / demand : 1
-  const leftoverUtil = demand - demand * serveScale
-  const keepScale = leftoverUtil > def.queueTicks ? def.queueTicks / leftoverUtil : 1
-
-  const served: Flows = {}
-  const queue: Flows = {}
-  let dropped = 0
-  for (const [k, p] of Object.entries(all)) {
-    addFlow(served, k, p.count * serveScale, p.latencyMs)
-    const left = p.count * (1 - serveScale)
-    addFlow(queue, k, left * keepScale, p.latencyMs)
-    dropped += left * (1 - keepScale)
-  }
-  const queueWaitMs = (units(backlog) / capTick / def.maxUtil) * TICK_MS
-  return {
-    served,
-    queue,
-    dropped,
-    load: units(inflow) / capTick,
-    latencyMs: def.baseLatencyMs * (1 + Math.min(demand, 2) ** 4) + queueWaitMs,
-    stale: 0,
-  }
-}
-
 /** One tick (100 ms of game time). Pure: never mutates `state`. */
 export function step(state: SimState): SimState {
   const { chapter, outEdges, reach } = state
   const stage = currentStage(state)
   const types = chapter.requestTypes
-  const weights = types.map((rt) => rt.weight)
   const nodesById = new Map<string, SimNode>(state.graph.nodes.map((n) => [n.id, n]))
   const inbox: Record<string, Flows> = {}
   const runtime: Record<string, NodeRuntime> = {}
@@ -173,8 +138,10 @@ export function step(state: SimState): SimState {
     if (target) crashed.add(target)
   }
 
-  const fail = (count: number) => {
-    stats.errors += count
+  // Abusive traffic never counts toward uptime: a lost scraper request is a bot stopped.
+  const fail = (t: number, count: number) => {
+    if (types[t]?.abusive) stats.botStopped += count
+    else stats.errors += count
   }
 
   for (const id of state.order) {
@@ -193,8 +160,8 @@ export function step(state: SimState): SimState {
       if (edgeServing.length > 0) valid = edgeServing
       else if (nonEdge.length > 0) valid = nonEdge
       if (valid.length === 0) {
-        stats.deadEnds += count
-        fail(count)
+        if (!types[t]!.abusive) stats.deadEnds += count
+        fail(t, count)
         return
       }
       const share = count / valid.length
@@ -207,6 +174,10 @@ export function step(state: SimState): SimState {
       const rt = types[t]!
       if (stepIdx < rt.needs.length) return route(t, stepIdx, count, latencyMs)
       if (count <= EPSILON) return
+      if (rt.abusive) {
+        stats.botServed += count
+        return
+      }
       const total = latencyMs + (node.kind === 'cdn' ? 0 : rt.distanceMs)
       stats.success += count
       const b = bucketIndex(total)
@@ -228,16 +199,25 @@ export function step(state: SimState): SimState {
     let instances = needsLb(node.kind) && !state.lbFed[id] ? Math.min(node.instances, 1) : node.instances
     if (crashed.has(id)) instances -= 1
     if (instances <= 0) {
-      const lost = [...Object.values(inflow), ...Object.values(backlog)].reduce((s, p) => s + p.count, 0)
-      fail(lost)
+      let lost = 0
+      for (const [k, p] of [...Object.entries(inflow), ...Object.entries(backlog)]) {
+        fail(parseKey(k)[0], p.count)
+        lost += p.count
+      }
       nodeStats[id] = { load: 0, processedRps: 0, droppedRps: lost * TICKS_PER_SEC, queued: 0, latencyMs: 0, down: true, staticShare: 0 }
       continue
     }
 
-    const ctx: ServeContext = { instances, inflow, backlog, chapter }
-    const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx, weights)
-    fail(res.dropped)
+    const ctx: ServeContext = { instances, inflow, backlog, chapter, stage }
+    const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx)
+    for (const [t, n] of Object.entries(res.dropped)) fail(Number(t), n)
+    // Rejections are deliberate: scrapers stopped is good, real users throttled is a violation.
+    for (const [t, n] of Object.entries(res.rejected ?? {})) {
+      if (!types[Number(t)]?.abusive) stats.throttled += n
+      fail(Number(t), n)
+    }
     stats.stale += res.stale
+    const droppedTotal = Object.values(res.dropped).reduce((s, n) => s + n, 0)
 
     const h = hitRate(node)
     let staticUnits = 0
@@ -265,7 +245,7 @@ export function step(state: SimState): SimState {
     nodeStats[id] = {
       load: res.load,
       processedRps: Object.values(res.served).reduce((s, p) => s + p.count, 0) * TICKS_PER_SEC,
-      droppedRps: res.dropped * TICKS_PER_SEC,
+      droppedRps: droppedTotal * TICKS_PER_SEC,
       queued: Object.values(res.queue).reduce((s, p) => s + p.count, 0),
       latencyMs: res.latencyMs,
       down: false,

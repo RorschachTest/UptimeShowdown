@@ -1,7 +1,7 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
 export type Capability = 'compute' | 'lookup' | 'write' | 'static'
@@ -11,6 +11,9 @@ export type ReadRouting = 'primary' | 'replicas' | 'ryw'
 export type CacheSize = 'S' | 'M' | 'L'
 export type WriteStrategy = 'aside' | 'through'
 export type CdnTtl = 'long' | 'short'
+export type RlAlgorithm = 'token' | 'leaky' | 'fixed' | 'slidingLog' | 'slidingCounter'
+export type RlLimit = 'low' | 'medium' | 'high'
+export type RlCounters = 'local' | 'shared'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -20,6 +23,9 @@ export interface NodeConfig {
   cacheSize: CacheSize
   writeStrategy: WriteStrategy
   cdnTtl: CdnTtl
+  rlAlgorithm: RlAlgorithm
+  rlLimit: RlLimit
+  rlCounters: RlCounters
 }
 
 export interface SimNode {
@@ -50,6 +56,10 @@ export interface RequestType {
   consistency: 'any' | 'ryw'
   /** Extra latency when not served from the edge (CDN), e.g. users on another continent. */
   distanceMs: number
+  /** Scrapers and bots: never count toward uptime or latency; tracked as bots served / stopped. */
+  abusive?: boolean
+  /** Peak ÷ average request rate of one client (bursty clients get rate-limited more easily). */
+  burst?: number
 }
 
 export interface TrafficPoint {
@@ -76,6 +86,8 @@ export interface Stage {
   traffic: TrafficPoint[]
   /** Share of traffic per request type id. */
   mix: Record<string, number>
+  /** Distinct clients sending each request type (for per-client rate limits). */
+  clients?: Record<string, number>
   /** What this stage newly unlocks (cumulative with earlier stages). */
   unlocks: { kinds: ComponentKind[]; settings: SettingId[] }
   events: CrashEvent[]
@@ -83,7 +95,15 @@ export interface Stage {
   budget: number
   /** Cost of the known-good design; ★★★ needs cost ≤ 1.5× this. */
   referenceCost: number
-  goals: { uptime: number; p95Ms: number; maxStaleRate: number }
+  goals: {
+    uptime: number
+    p95Ms: number
+    maxStaleRate: number
+    /** Max share of abusive requests that may get through and be served. */
+    maxBotServedRate?: number
+    /** Max share of real-user requests the rate limiter may reject. */
+    maxThrottledRate?: number
+  }
 }
 
 export interface Chapter {
@@ -132,6 +152,11 @@ export interface TickStats {
   deadEnds: number
   /** Successful 'ryw' requests answered with stale data. */
   stale: number
+  /** Real-user requests rejected by a rate limiter. Included in errors. */
+  throttled: number
+  /** Abusive requests that were served (bad) or stopped anywhere (good). Not in success/errors. */
+  botServed: number
+  botStopped: number
   latencyHist: number[]
 }
 
@@ -158,7 +183,7 @@ export interface SimState {
 // ── Interview levels (Chapter 3 shell, reused by later problem chapters) ──
 
 /** A hidden parameter of the problem, shown as "?" until a question reveals it. */
-export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency'
+export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth'
 
 export interface QuestionCard {
   id: string

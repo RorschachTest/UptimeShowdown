@@ -47,6 +47,7 @@ export function HUD() {
   const started = sim.tick > 0
   const finished = metrics.successRps + metrics.errorRps > 0
   const showStale = (stage.mix.ryw ?? 0) > 0
+  const showBots = sim.chapter.requestTypes.some((rt) => rt.abusive && (stage.mix[rt.id] ?? 0) > 0)
   // Chapter 2 has no board: only the title and chapter picker apply.
   const estimating = useGameStore((s) => s.estimate !== null)
 
@@ -85,6 +86,13 @@ export function HUD() {
           tone={started && metrics.p95Ms > 0 ? (metrics.p95Ms <= stage.goals.p95Ms ? 'ok' : 'bad') : undefined}
         />
         <Stat label="Errors" value={`${fmtInt(metrics.errorRps)}/s`} tone={metrics.errorRps >= 1 ? 'bad' : undefined} />
+        {showBots && (
+          <Stat
+            label="Scrapers through"
+            value={fmtPct(metrics.botServedRate)}
+            tone={started && stage.goals.maxBotServedRate !== undefined ? (metrics.botServedRate <= stage.goals.maxBotServedRate ? 'ok' : 'bad') : undefined}
+          />
+        )}
         {showStale && (
           <Stat
             label="Stale reads"
