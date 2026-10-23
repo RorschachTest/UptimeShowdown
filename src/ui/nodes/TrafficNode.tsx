@@ -1,19 +1,21 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { trafficRpsAt, TICKS_PER_SEC } from '../../engine/simulator'
+import { currentStage, trafficRpsAt, TICKS_PER_SEC } from '../../engine/simulator'
 import { useGameStore } from '../../store'
 import { fmtInt, fmtPct } from '../format'
 import type { GameNode } from '../graph'
 import { ComponentIcon } from '../icons'
+import { TYPE_COLORS } from '../settings'
 
-/** Where the level's users come from. Set by the level; the player can only wire it up. */
+/** Where the stage's users come from. Set by the stage; the player can only wire it up. */
 export function TrafficNode({ id }: NodeProps<GameNode>) {
-  const level = useGameStore((s) => s.level)
-  const tick = useGameStore((s) => s.sim.tick)
+  const sim = useGameStore((s) => s.sim)
   const wired = useGameStore((s) => s.edges.some((e) => e.source === id))
-  const rps = trafficRpsAt(level, tick / TICKS_PER_SEC)
+  const stage = currentStage(sim)
+  const rps = trafficRpsAt(stage, sim.tick / TICKS_PER_SEC)
+  const types = sim.chapter.requestTypes.filter((rt) => (stage.mix[rt.id] ?? 0) > 0)
 
   return (
-    <div className="relative w-44">
+    <div className="relative w-48">
       <div className="piece bg-ink px-3 pt-2.5 pb-3 text-piece">
         <div className="flex items-center gap-2">
           <ComponentIcon kind="traffic" />
@@ -24,13 +26,18 @@ export function TrafficNode({ id }: NodeProps<GameNode>) {
         </p>
 
         <div className="mt-2.5 flex h-2 overflow-hidden rounded-full" aria-hidden="true">
-          <div className="bg-read" style={{ width: `${level.mix.read * 100}%` }} />
-          <div className="bg-write" style={{ width: `${level.mix.write * 100}%` }} />
+          {types.map((rt) => (
+            <div key={rt.id} style={{ width: `${(stage.mix[rt.id] ?? 0) * 100}%`, background: TYPE_COLORS[rt.id] }} />
+          ))}
         </div>
-        <div className="mt-1 flex justify-between text-xs opacity-80">
-          <span>{fmtPct(level.mix.read)} reads</span>
-          <span>{fmtPct(level.mix.write)} writes</span>
-        </div>
+        <ul className="mt-1.5 grid grid-cols-2 gap-x-2 text-xs opacity-85">
+          {types.map((rt) => (
+            <li key={rt.id} className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full" style={{ background: TYPE_COLORS[rt.id] }} aria-hidden="true" />
+              {rt.label} {fmtPct(stage.mix[rt.id] ?? 0)}
+            </li>
+          ))}
+        </ul>
         {!wired && <p className="mt-2 text-xs font-medium text-warn">Not connected: every request fails</p>}
       </div>
       <Handle type="source" position={Position.Right} />

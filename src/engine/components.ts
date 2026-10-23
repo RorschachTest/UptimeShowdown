@@ -1,61 +1,109 @@
-import type { ComponentKind, Flow } from './types'
+import type { CacheSize, Capability, CdnTtl, ComponentKind, NodeConfig, SimNode } from './types'
 
 export interface ComponentSpec {
   kind: ComponentKind
   label: string
-  /** Per instance, per class. Utilisation is the sum over classes of demand / capacity. */
-  capacityRps: Flow
+  /** Capacity units per second, per instance, at tier S. SQL DB uses DB_READ_RPS/DB_WRITE_RPS instead. */
+  capacityRps: number
   baseLatencyMs: number
-  /** Per instance. */
+  /** Per instance at tier S. */
   costPerMin: number
-  /** Utilisation the node can actually push through; demand above it waits in the queue or drops. */
+  /** Utilisation the node can push through; above it work queues or drops. */
   maxUtil: number
-  /** Backlog limit as a multiple of one tick's capacity. 0 = no queue, excess drops at once. */
+  /** Backlog limit as a multiple of one tick's capacity. 0 = no queue. */
   queueTicks: number
-  minInstances: number
+  serves: Capability[]
+  /** Serves its capability only for a hit fraction (cache, CDN); misses continue downstream. */
+  partial: boolean
   maxInstances: number
-  failureMode: string
+  tiered: boolean
 }
 
+const base = { maxUtil: 1, queueTicks: 0, partial: false, maxInstances: 1, tiered: false }
+
 export const COMPONENTS: Record<ComponentKind, ComponentSpec> = {
-  traffic: {
-    kind: 'traffic',
-    label: 'Traffic Source',
-    capacityRps: { read: Infinity, write: Infinity },
-    baseLatencyMs: 0,
-    costPerMin: 0,
-    maxUtil: 1,
-    queueTicks: 0,
-    minInstances: 1,
+  traffic: { ...base, kind: 'traffic', label: 'Users', capacityRps: Infinity, baseLatencyMs: 0, costPerMin: 0, serves: [] },
+  allinone: {
+    ...base,
+    kind: 'allinone',
+    label: 'Single Server',
+    capacityRps: 300,
+    baseLatencyMs: 30,
+    costPerMin: 20,
+    queueTicks: 2,
+    serves: ['compute', 'lookup', 'write', 'static'],
     maxInstances: 1,
-    failureMode: 'Emits the level traffic. Requests with nowhere to go are errors.',
+    tiered: true,
   },
   app: {
+    ...base,
     kind: 'app',
-    label: 'App Server',
-    capacityRps: { read: 500, write: 500 },
+    label: 'Web Server',
+    capacityRps: 500,
     baseLatencyMs: 20,
     costPerMin: 10,
-    maxUtil: 1,
     queueTicks: 2,
-    minInstances: 1,
+    serves: ['compute', 'static'],
     maxInstances: 20,
-    failureMode: 'Queues up to 2× capacity, then drops.',
+    tiered: true,
   },
+  lb: { ...base, kind: 'lb', label: 'Load Balancer', capacityRps: 20_000, baseLatencyMs: 2, costPerMin: 15, serves: [] },
   sqldb: {
+    ...base,
     kind: 'sqldb',
     label: 'SQL Database',
-    capacityRps: { read: 1000, write: 200 },
+    capacityRps: 0,
     baseLatencyMs: 10,
     costPerMin: 40,
     maxUtil: 1.2,
-    queueTicks: 0,
-    minInstances: 1,
-    maxInstances: 1,
-    failureMode: 'Latency climbs sharply above 80% load; drops above 120%.',
+    serves: ['lookup', 'write'],
+    tiered: true,
   },
+  cache: { ...base, kind: 'cache', label: 'Cache', capacityRps: 50_000, baseLatencyMs: 1, costPerMin: 0, serves: ['lookup'], partial: true },
+  cdn: { ...base, kind: 'cdn', label: 'CDN', capacityRps: 100_000, baseLatencyMs: 5, costPerMin: 25, serves: ['static'], partial: true },
 }
 
-export function costPerMin(kind: ComponentKind, instances: number): number {
-  return COMPONENTS[kind].costPerMin * instances
+/** Vertical scaling: capacity doubles per tier, cost rises faster (the "cost knee"). */
+export const TIER_CAPACITY = [1, 2, 4, 8] as const
+export const TIER_COST = [1, 2.2, 5, 12] as const
+export const TIER_LABELS = ['S', 'M', 'L', 'XL'] as const
+
+export const DB_READ_RPS = 1000
+export const DB_WRITE_RPS = 200
+export const REPLICA_COST = 30
+export const MAX_REPLICAS = 5
+
+export const CACHE_SIZES: Record<CacheSize, { hitRate: number; cost: number }> = {
+  S: { hitRate: 0.6, cost: 10 },
+  M: { hitRate: 0.85, cost: 20 },
+  L: { hitRate: 0.95, cost: 40 },
+}
+
+export const CDN_HIT_RATE: Record<CdnTtl, number> = { long: 0.95, short: 0.7 }
+
+export const DEFAULT_CONFIG: NodeConfig = {
+  tier: 0,
+  replicas: 0,
+  readRouting: 'primary',
+  cacheSize: 'M',
+  writeStrategy: 'aside',
+  cdnTtl: 'long',
+}
+
+export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
+  return cap !== undefined && COMPONENTS[kind].serves.includes(cap)
+}
+
+export function hitRate(node: SimNode): number {
+  if (node.kind === 'cache') return CACHE_SIZES[node.config.cacheSize].hitRate
+  if (node.kind === 'cdn') return CDN_HIT_RATE[node.config.cdnTtl]
+  return 0
+}
+
+export function nodeCostPerMin(node: SimNode): number {
+  const spec = COMPONENTS[node.kind]
+  const tierCost = spec.tiered ? TIER_COST[node.config.tier] : 1
+  if (node.kind === 'cache') return CACHE_SIZES[node.config.cacheSize].cost
+  if (node.kind === 'sqldb') return Math.round((spec.costPerMin + node.config.replicas * REPLICA_COST) * tierCost)
+  return Math.round(spec.costPerMin * node.instances * tierCost)
 }

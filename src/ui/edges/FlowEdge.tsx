@@ -1,6 +1,7 @@
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
 import { useGameStore } from '../../store'
 import { fmtInt } from '../format'
+import { TYPE_COLORS } from '../settings'
 
 const DOT_TRAVEL_SECONDS = 1.6
 const MAX_DOTS = 6
@@ -11,16 +12,23 @@ function dotCount(rps: number): number {
   return Math.min(MAX_DOTS, Math.max(1, Math.round(Math.log2(rps / 50))))
 }
 
-/** A wire. Dots flow along it, density by rps, coloured by read/write share. */
+/** A wire. Dots flow along it, density by rps, coloured by the stage's request mix. */
 export function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd }: EdgeProps) {
   const rps = useGameStore((s) => s.sim.edgeRps[id] ?? 0)
-  const writeShare = useGameStore((s) => s.level.mix.write)
+  const mix = useGameStore((s) => s.chapter.stages[s.stageIndex]!.mix)
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
 
   const dots = dotCount(rps)
-  const writeDots = writeShare > 0 && dots > 0 ? Math.max(1, Math.round(dots * writeShare)) : 0
-  // Spread write dots evenly among the read dots.
-  const isWrite = (i: number) => Math.floor(((i + 1) * writeDots) / dots) > Math.floor((i * writeDots) / dots)
+  // Colour dots by the stage's request mix: dot i takes the type whose cumulative share covers it.
+  const shares = Object.entries(mix).filter(([, v]) => v > 0)
+  const colorOf = (i: number) => {
+    let cum = 0
+    for (const [type, share] of shares) {
+      cum += share
+      if ((i + 0.5) / dots <= cum) return TYPE_COLORS[type]
+    }
+    return TYPE_COLORS[shares[shares.length - 1]?.[0] ?? 'page']
+  }
 
   return (
     <>
@@ -30,7 +38,7 @@ export function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositio
           key={`${dots}-${i}`}
           className="flow-dot"
           r={3.5}
-          fill={isWrite(i) ? 'var(--color-write)' : 'var(--color-read)'}
+          fill={colorOf(i)}
         >
           <animateMotion
             dur={`${DOT_TRAVEL_SECONDS}s`}
