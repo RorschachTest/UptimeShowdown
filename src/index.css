@@ -80,6 +80,11 @@ body {
   border: 2px solid var(--color-ink);
 }
 
+/* Wire labels (and their hover cards) sit above the pieces so a breakdown is never hidden. */
+.react-flow__edgelabel-renderer {
+  z-index: 5;
+}
+
 .react-flow__handle:hover {
   background: var(--color-ink);
 }

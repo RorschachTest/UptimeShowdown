@@ -206,6 +206,21 @@ describe('CDN', () => {
     expect(s.totals.errors).toBe(0)
   })
 
+  it('tracks each wire’s traffic by request type', () => {
+    // Static goes only to the CDN; page views skip it; CDN misses reach the web server.
+    const g = graph(
+      [['u', 'traffic'], ['cdn', 'cdn'], ['lb', 'lb'], ['web', 'app', 4], ['db', 'sqldb']],
+      ['u>cdn', 'u>lb', 'cdn>web', 'lb>web', 'web>db'],
+    )
+    const s = run(initSim(g, testChapter(1000, { static: 0.5, page: 0.5 }), 0), 10)
+    const PAGE = 0
+    const STATIC = 3
+    expect(s.edgeTypes['u>cdn']![STATIC]).toBeCloseTo(500)
+    expect(s.edgeTypes['u>cdn']![PAGE]).toBeUndefined()
+    expect(s.edgeTypes['u>lb']![PAGE]).toBeCloseTo(500)
+    expect(s.edgeTypes['cdn>web']![STATIC]).toBeCloseTo(25)
+  })
+
   it('adds the distance penalty to static files served from the origin', () => {
     const g = graph([['u', 'traffic'], ['web', 'app', 1, { tier: 1 }]], ['u>web'])
     const s = run(initSim(g, testChapter(100, { static: 1 }), 0), 10)

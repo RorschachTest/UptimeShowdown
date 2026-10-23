@@ -99,6 +99,7 @@ export function initSim(graph: Graph, chapter: Chapter, stageIndex: number): Sim
     runtime: {},
     nodeStats: {},
     edgeRps: {},
+    edgeTypes: {},
     window: [],
     totals: emptyStats(),
     rng: chapter.seed,
@@ -127,6 +128,7 @@ export function step(state: SimState): SimState {
   const runtime: Record<string, NodeRuntime> = {}
   const nodeStats: Record<string, NodeTickStats> = {}
   const edgeRps: Record<string, number> = {}
+  const edgeTypes: Record<string, Record<number, number>> = {}
   const stats: TickStats = emptyStats()
   const seconds = state.tick / TICKS_PER_SEC
 
@@ -168,6 +170,8 @@ export function step(state: SimState): SimState {
       for (const e of valid) {
         addFlow((inbox[e.target] ??= {}), flowKey(t, stepIdx), share, latencyMs)
         edgeRps[e.id] = (edgeRps[e.id] ?? 0) + share * TICKS_PER_SEC
+        const byType = (edgeTypes[e.id] ??= {})
+        byType[t] = (byType[t] ?? 0) + share * TICKS_PER_SEC
       }
     }
     const finishOrRoute = (t: number, stepIdx: number, count: number, latencyMs: number) => {
@@ -260,6 +264,7 @@ export function step(state: SimState): SimState {
     runtime,
     nodeStats,
     edgeRps,
+    edgeTypes,
     window: [...state.window, stats].slice(-WINDOW_TICKS),
     totals: addStats(state.totals, stats),
   }

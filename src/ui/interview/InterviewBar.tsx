@@ -1,15 +1,19 @@
 import { changedPieces } from '../../engine/interview'
-import type { FactId } from '../../engine/types'
+import type { QuestionCard } from '../../engine/types'
 import { PHASES } from '../../interviewSlice'
 import { useGameStore } from '../../store'
 import { toSimGraph } from '../graph'
-import { FACT_LABELS, useFact } from './facts'
+import { FACT_LABELS } from './facts'
 
-function FactChip({ id }: { id: FactId }) {
-  const value = useFact(id)
+/** One chip per fact-revealing question: its short answer once asked, "?" until then. */
+function FactChip({ question, asked }: { question: QuestionCard; asked: boolean }) {
+  const label = FACT_LABELS[question.reveals[0]!]
   return (
-    <li className={`rounded-full border-2 px-2 py-0.5 text-xs font-semibold ${value ? 'border-ink/20' : 'border-dashed border-ink/30 text-ink-faint'}`}>
-      {FACT_LABELS[id]}: {value ?? '?'}
+    <li
+      className={`rounded-full border-2 px-2 py-0.5 text-xs font-semibold ${asked ? 'border-ink/20' : 'border-dashed border-ink/30 text-ink-faint'}`}
+      title={asked ? question.answer : `Not asked: ${question.text}`}
+    >
+      {label}: {asked ? (question.short ?? question.answer) : '?'}
     </li>
   )
 }
@@ -67,9 +71,11 @@ export function InterviewBar() {
 
       {iv.phase !== 'scope' && (
         <ul className="flex flex-wrap gap-1.5" aria-label="What you know">
-          {[...new Set(iv.level.questions.flatMap((q) => q.reveals))].map((f: FactId) => (
-            <FactChip key={f} id={f} />
-          ))}
+          {iv.level.questions
+            .filter((q) => q.reveals.length > 0)
+            .map((q) => (
+              <FactChip key={q.id} question={q} asked={iv.asked.includes(q.id)} />
+            ))}
         </ul>
       )}
 

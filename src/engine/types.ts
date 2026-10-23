@@ -175,6 +175,8 @@ export interface SimState {
   runtime: Record<string, NodeRuntime>
   nodeStats: Record<string, NodeTickStats>
   edgeRps: Record<string, number>
+  /** Requests per second on each edge, split by request type index. */
+  edgeTypes: Record<string, Record<number, number>>
   window: TickStats[]
   totals: TickStats
   rng: number
