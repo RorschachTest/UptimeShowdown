@@ -4,6 +4,7 @@ import { app } from './app'
 import { cache } from './cache'
 import { cdn } from './cdn'
 import { lb } from './lb'
+import { ratelimit } from './ratelimit'
 import { defineComponent, type ComponentDef, type CountSetting } from './shared'
 import { sqldb } from './sqldb'
 
@@ -23,7 +24,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -32,6 +33,9 @@ export const DEFAULT_CONFIG: NodeConfig = {
   cacheSize: 'M',
   writeStrategy: 'aside',
   cdnTtl: 'long',
+  rlAlgorithm: 'token',
+  rlLimit: 'medium',
+  rlCounters: 'local',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {

@@ -1,4 +1,4 @@
-import type { Capability, Chapter, ComponentKind, Flows, NodeConfig, SettingId, SimNode, Tier } from '../types'
+import type { Capability, Chapter, ComponentKind, Flows, NodeConfig, SettingId, SimNode, Stage, Tier } from '../types'
 
 export interface Tradeoff {
   solves: string
@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -45,7 +45,10 @@ export type Bottleneck = 'compute' | 'storage' | 'network'
 export interface Served {
   served: Flows
   queue: Flows
-  dropped: number
+  /** Requests lost to overload, per request type index. */
+  dropped: Record<number, number>
+  /** Requests refused on purpose (a rate limiter's 429s), per request type index. */
+  rejected?: Record<number, number>
   load: number
   latencyMs: number
   stale: number
@@ -56,6 +59,13 @@ export interface ServeContext {
   inflow: Flows
   backlog: Flows
   chapter: Chapter
+  stage: Stage
+}
+
+/** What a component's review() sees: enough to judge its own configuration. */
+export interface ReviewContext {
+  /** Whether a load balancer or other router sits in front of this node. */
+  balanced: boolean
 }
 
 /** Everything about one kind of piece: mechanics, settings, copy. The UI renders it generically. */
@@ -77,6 +87,8 @@ export interface ComponentDef extends Tradeoff {
   partial: boolean
   /** Sits at the network edge: gets only what it serves when another path exists. */
   edge: boolean
+  /** Routes across the instances behind it (load balancer, API gateway). */
+  balances: boolean
   /** Has a machine-size (tier) setting that scales capacity and cost. */
   tiered: boolean
   bound: Bottleneck
@@ -89,6 +101,8 @@ export interface ComponentDef extends Tradeoff {
   hitRate?: (config: NodeConfig) => number
   /** Custom serving model; components without one use the generic capacity pool. */
   serve?: (node: SimNode, ctx: ServeContext) => Served
+  /** Interviewer notes about this piece's own configuration. */
+  review?: (node: SimNode, ctx: ReviewContext) => string[]
 }
 
 /** Vertical scaling: capacity doubles per size, cost rises faster (the "cost knee"). */
@@ -113,7 +127,7 @@ export const tierSetting: ChoiceSetting<'tier'> = {
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US')
 
-type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
+type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
 
 /** Fill in the common defaults so each component file only states what's special about it. */
 export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick<ComponentDef, Defaults>>): ComponentDef {
@@ -122,6 +136,7 @@ export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick
     queueTicks: 0,
     partial: false,
     edge: false,
+    balances: false,
     tiered: false,
     bound: 'compute',
     choices: [],

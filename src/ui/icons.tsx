@@ -37,6 +37,12 @@ const paths: Record<ComponentKind, React.ReactNode> = {
     </>
   ),
   cache: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />,
+  ratelimit: (
+    <>
+      <path d="M4 18a8 8 0 1 1 16 0" />
+      <path d="M12 18l4-5M8 18h.01M16 18h.01M12 10h.01" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

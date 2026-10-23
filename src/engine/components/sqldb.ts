@@ -87,12 +87,12 @@ export const sqldb = defineComponent({
     const sr = replicaUtil > 1.2 ? 1.2 / replicaUtil : 1
 
     const served: Flows = {}
-    let dropped = 0
+    const dropped: Record<number, number> = {}
     let stale = 0
     for (const { k, t, p, share } of entries) {
       const ok = p.count * ((1 - share) * sp + share * sr)
       addFlow(served, k, ok, p.latencyMs)
-      dropped += p.count - ok
+      dropped[t] = (dropped[t] ?? 0) + p.count - ok
       // Replicas lag the primary: a user reading their own write there may not see it.
       if (chapter.requestTypes[t]!.consistency === 'ryw') stale += p.count * share * sr
     }

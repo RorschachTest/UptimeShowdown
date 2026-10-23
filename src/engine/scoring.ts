@@ -18,6 +18,9 @@ export function emptyStats(): TickStats {
     errors: 0,
     deadEnds: 0,
     stale: 0,
+    throttled: 0,
+    botServed: 0,
+    botStopped: 0,
     latencyHist: new Array<number>(LATENCY_BUCKETS.length).fill(0),
   }
 }
@@ -29,6 +32,9 @@ export function addStats(a: TickStats, b: TickStats): TickStats {
     errors: a.errors + b.errors,
     deadEnds: a.deadEnds + b.deadEnds,
     stale: a.stale + b.stale,
+    throttled: a.throttled + b.throttled,
+    botServed: a.botServed + b.botServed,
+    botStopped: a.botStopped + b.botStopped,
     latencyHist: a.latencyHist.map((v, i) => v + (b.latencyHist[i] ?? 0)),
   }
 }
@@ -62,6 +68,10 @@ export interface Metrics {
   p95Ms: number
   /** Stale answers as a share of successful requests. */
   staleRate: number
+  /** Share of real-user requests rejected by a rate limiter. */
+  throttledRate: number
+  /** Share of abusive requests that got served. */
+  botServedRate: number
 }
 
 export function metricsOf(sum: TickStats, ticks: number): Metrics {
@@ -76,6 +86,8 @@ export function metricsOf(sum: TickStats, ticks: number): Metrics {
     p50Ms: percentile(sum.latencyHist, 0.5),
     p95Ms: percentile(sum.latencyHist, 0.95),
     staleRate: sum.success > 0 ? sum.stale / sum.success : 0,
+    throttledRate: finished > 0 ? sum.throttled / finished : 0,
+    botServedRate: sum.botServed + sum.botStopped > 0 ? sum.botServed / (sum.botServed + sum.botStopped) : 0,
   }
 }
 
@@ -108,6 +120,10 @@ export function stageResult(state: SimState): StageResult {
   if (metrics.p95Ms > goals.p95Ms) missed.push(`p95 latency ${Math.round(metrics.p95Ms)} ms is over ${goals.p95Ms} ms`)
   if (metrics.staleRate > goals.maxStaleRate)
     missed.push(`${(metrics.staleRate * 100).toFixed(1)}% of answers were stale (users didn't see their own writes)`)
+  if (goals.maxThrottledRate !== undefined && metrics.throttledRate > goals.maxThrottledRate)
+    missed.push(`${(metrics.throttledRate * 100).toFixed(1)}% of real users' requests were rate-limited`)
+  if (goals.maxBotServedRate !== undefined && metrics.botServedRate > goals.maxBotServedRate)
+    missed.push(`${(metrics.botServedRate * 100).toFixed(1)}% of scraper requests got through (limit ${goals.maxBotServedRate * 100}%)`)
   const goalsMet = missed.length === 0
   const inBudget = cost <= stage.budget
   const lean = cost <= stage.referenceCost * 1.5

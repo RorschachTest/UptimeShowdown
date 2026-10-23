@@ -25,6 +25,7 @@ export function reviewDesign(state: SimState, level: InterviewLevel, asked: stri
 
   for (const node of state.graph.nodes) {
     const def = COMPONENTS[node.kind]
+    for (const text of def.review?.(node, { balanced: !!state.lbFed[node.id] }) ?? []) warn(text)
     if (def.count?.field === 'instances') {
       if (node.instances === 1) warn(`A single ${def.label}: if it crashes, everything behind it goes with it.`)
       else if (!state.lbFed[node.id]) warn(`${node.instances} ${def.label}s, but no load balancer in front: users can only reach one.`)
