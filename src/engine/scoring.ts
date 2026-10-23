@@ -1,4 +1,4 @@
-import { COMPONENTS, nodeCostPerMin } from './components'
+import { COMPONENTS, nodeCostPerMin, type Bottleneck } from './components'
 import type { Graph, SimState, TickStats } from './types'
 
 // Latency histogram buckets: upper bounds grow by 25% from 1 ms to ~23 s.
@@ -120,7 +120,7 @@ export function stageResult(state: SimState): StageResult {
   return { stars, metrics, cost, missed }
 }
 
-export type Bottleneck = 'compute' | 'storage' | 'network'
+export type { Bottleneck }
 
 export interface Diagnosis {
   bound: Bottleneck
@@ -138,12 +138,9 @@ export function diagnose(state: SimState): Diagnosis | null {
     if (!s || node.kind === 'traffic') continue
     const load = s.down ? Infinity : s.load
     if (load < 0.85 || (worst && load <= worst.load)) continue
-    const bound: Bottleneck =
-      node.kind === 'sqldb' || node.kind === 'cache'
-        ? 'storage'
-        : node.kind === 'lb' || node.kind === 'cdn' || s.staticShare > 0.5
-          ? 'network'
-          : 'compute'
+    // A compute node mostly shipping static files is really limited by bandwidth.
+    const own = COMPONENTS[node.kind].bound
+    const bound: Bottleneck = own === 'compute' && s.staticShare > 0.5 ? 'network' : own
     worst = { bound, nodeId: node.id, label: COMPONENTS[node.kind].label, load, down: s.down }
   }
   return worst

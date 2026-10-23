@@ -1,46 +1,14 @@
-import { COMPONENTS, DB_READ_RPS, DB_WRITE_RPS, TIER_CAPACITY, hitRate, serves } from './components'
+import { COMPONENTS, hitRate, serves, tierMult, type Served, type ServeContext } from './components'
+import { addFlow, EPSILON, flowKey, parseKey, TICK_MS, TICKS_PER_SEC } from './flows'
 import { addStats, bucketIndex, emptyStats } from './scoring'
-import type {
-  Capability,
-  Chapter,
-  ComponentKind,
-  Flows,
-  Graph,
-  NodeRuntime,
-  NodeTickStats,
-  SimEdge,
-  SimNode,
-  SimState,
-  Stage,
-  TickStats,
-} from './types'
+import type { Capability, Chapter, ComponentKind, Flows, Graph, NodeRuntime, NodeTickStats, SimEdge, SimNode, SimState, Stage, TickStats } from './types'
 
-export const TICK_MS = 100
-export const TICKS_PER_SEC = 1000 / TICK_MS
+export { TICK_MS, TICKS_PER_SEC } from './flows'
 /** Rolling window for live metrics: 5 s of game time. */
 export const WINDOW_TICKS = 50
 
-const EPSILON = 1e-9
-
-const flowKey = (type: number, step: number) => `${type}:${step}`
-function parseKey(key: string): [type: number, step: number] {
-  const [t, s] = key.split(':')
-  return [Number(t), Number(s)]
-}
-
-function addFlow(flows: Flows, key: string, count: number, latencyMs: number) {
-  if (count <= EPSILON) return
-  const f = flows[key]
-  if (!f) {
-    flows[key] = { count, latencyMs }
-    return
-  }
-  const total = f.count + count
-  f.latencyMs = (f.latencyMs * f.count + latencyMs * count) / total
-  f.count = total
-}
-
-const isCompute = (kind: ComponentKind) => kind === 'app' || kind === 'allinone'
+/** Pieces scaled by instance count can only use more than one instance behind a load balancer. */
+const needsLb = (kind: ComponentKind) => COMPONENTS[kind].count?.field === 'instances'
 
 export function currentStage(state: Pick<SimState, 'chapter' | 'stageIndex'>): Stage {
   return state.chapter.stages[state.stageIndex]!
@@ -148,32 +116,20 @@ export function stageFinished(state: SimState): boolean {
   return state.tick >= currentStage(state).durationS * TICKS_PER_SEC
 }
 
-/** Result of serving the inflow (+ backlog) at one node for one tick. */
-interface Served {
-  served: Flows
-  queue: Flows
-  dropped: number
-  load: number
-  latencyMs: number
-  stale: number
-}
-
-/** Generic node: one capacity pool in weighted units, optional backlog. */
-function serveGeneric(node: SimNode, instances: number, inflow: Flows, backlog: Flows, weights: number[]): Served {
-  const spec = COMPONENTS[node.kind]
-  const tierMult = spec.tiered ? TIER_CAPACITY[node.config.tier] : 1
-  const capTick = (spec.capacityRps * instances * tierMult) / TICKS_PER_SEC
-  const units = (f: Flows) =>
-    Object.entries(f).reduce((s, [k, p]) => s + p.count * (weights[parseKey(k)[0]] ?? 1), 0)
+/** Default serving model: one capacity pool in weighted units, with an optional backlog. */
+function serveGeneric(node: SimNode, { instances, inflow, backlog }: ServeContext, weights: number[]): Served {
+  const def = COMPONENTS[node.kind]
+  const capTick = (def.capacityRps * instances * tierMult(def, node.config.tier)) / TICKS_PER_SEC
+  const units = (f: Flows) => Object.entries(f).reduce((s, [k, p]) => s + p.count * (weights[parseKey(k)[0]] ?? 1), 0)
 
   const all: Flows = {}
   for (const [k, p] of Object.entries(backlog)) addFlow(all, k, p.count, p.latencyMs)
   for (const [k, p] of Object.entries(inflow)) addFlow(all, k, p.count, p.latencyMs)
 
   const demand = units(all) / capTick
-  const serveScale = demand > spec.maxUtil ? spec.maxUtil / demand : 1
-  const leftoverUtil = (demand - demand * serveScale) || 0
-  const keepScale = leftoverUtil > spec.queueTicks ? spec.queueTicks / leftoverUtil : 1
+  const serveScale = demand > def.maxUtil ? def.maxUtil / demand : 1
+  const leftoverUtil = demand - demand * serveScale
+  const keepScale = leftoverUtil > def.queueTicks ? def.queueTicks / leftoverUtil : 1
 
   const served: Flows = {}
   const queue: Flows = {}
@@ -184,71 +140,14 @@ function serveGeneric(node: SimNode, instances: number, inflow: Flows, backlog: 
     addFlow(queue, k, left * keepScale, p.latencyMs)
     dropped += left * (1 - keepScale)
   }
-  const queueWaitMs = (units(backlog) / capTick / spec.maxUtil) * TICK_MS
+  const queueWaitMs = (units(backlog) / capTick / def.maxUtil) * TICK_MS
   return {
     served,
     queue,
     dropped,
     load: units(inflow) / capTick,
-    latencyMs: spec.baseLatencyMs * (1 + Math.min(demand, 2) ** 4) + queueWaitMs,
+    latencyMs: def.baseLatencyMs * (1 + Math.min(demand, 2) ** 4) + queueWaitMs,
     stale: 0,
-  }
-}
-
-/** SQL DB: a primary (reads + writes) plus read replicas, routed by the read-routing setting. */
-function serveDb(node: SimNode, inflow: Flows, chapter: Chapter): Served {
-  const spec = COMPONENTS.sqldb
-  const m = TIER_CAPACITY[node.config.tier]
-  const readCap = (DB_READ_RPS * m) / TICKS_PER_SEC
-  const writeCap = (DB_WRITE_RPS * m) / TICKS_PER_SEC
-  const replicas = node.config.replicas
-
-  // Share of each read flow that goes to replicas.
-  const replicaShare = (t: number) => {
-    if (replicas === 0) return 0
-    const routing = node.config.readRouting
-    if (routing === 'replicas') return replicas / (1 + replicas)
-    if (routing === 'ryw') return chapter.requestTypes[t]!.consistency === 'ryw' ? 0 : 1
-    return 0
-  }
-
-  let primaryReads = 0
-  let replicaReads = 0
-  let writes = 0
-  const entries = Object.entries(inflow).map(([k, p]) => {
-    const [t, step] = parseKey(k)
-    const need = chapter.requestTypes[t]!.needs[step]
-    const share = need === 'lookup' ? replicaShare(t) : 0
-    if (need === 'lookup') {
-      primaryReads += p.count * (1 - share)
-      replicaReads += p.count * share
-    } else writes += p.count
-    return { k, t, p, share }
-  })
-
-  const primaryUtil = primaryReads / readCap + writes / writeCap
-  const replicaUtil = replicas > 0 ? replicaReads / (readCap * replicas) : 0
-  const sp = primaryUtil > spec.maxUtil ? spec.maxUtil / primaryUtil : 1
-  const sr = replicaUtil > spec.maxUtil ? spec.maxUtil / replicaUtil : 1
-
-  const served: Flows = {}
-  let dropped = 0
-  let stale = 0
-  for (const { k, t, p, share } of entries) {
-    const ok = p.count * ((1 - share) * sp + share * sr)
-    addFlow(served, k, ok, p.latencyMs)
-    dropped += p.count - ok
-    // Replicas lag the primary: a user reading their own write there may not see it.
-    if (chapter.requestTypes[t]!.consistency === 'ryw') stale += p.count * share * sr
-  }
-  const load = Math.max(primaryUtil, replicaUtil)
-  return {
-    served,
-    queue: {},
-    dropped,
-    load,
-    latencyMs: spec.baseLatencyMs * (1 + Math.min(load, 2) ** 4),
-    stale,
   }
 }
 
@@ -284,7 +183,15 @@ export function step(state: SimState): SimState {
 
     const route = (t: number, stepIdx: number, count: number, latencyMs: number) => {
       if (count <= EPSILON) return
-      const valid = (outEdges[id] ?? []).filter((e) => reach[e.target]?.[t]?.[stepIdx] === true)
+      let valid = (outEdges[id] ?? []).filter((e) => reach[e.target]?.[t]?.[stepIdx] === true)
+      // Edge pieces (CDN) work like a separate hostname: they get what they serve, and other
+      // requests skip them when another path exists. As the only path they proxy everything.
+      const need = types[t]!.needs[stepIdx]
+      const kindOf = (e: SimEdge) => nodesById.get(e.target)!.kind
+      const edgeServing = valid.filter((e) => COMPONENTS[kindOf(e)].edge && serves(kindOf(e), need))
+      const nonEdge = valid.filter((e) => !COMPONENTS[kindOf(e)].edge)
+      if (edgeServing.length > 0) valid = edgeServing
+      else if (nonEdge.length > 0) valid = nonEdge
       if (valid.length === 0) {
         stats.deadEnds += count
         fail(count)
@@ -318,7 +225,7 @@ export function step(state: SimState): SimState {
     const backlog = state.runtime[id]?.queue ?? {}
 
     // Without a load balancer in front, users can only reach one of the instances.
-    let instances = isCompute(node.kind) && !state.lbFed[id] ? Math.min(node.instances, 1) : node.instances
+    let instances = needsLb(node.kind) && !state.lbFed[id] ? Math.min(node.instances, 1) : node.instances
     if (crashed.has(id)) instances -= 1
     if (instances <= 0) {
       const lost = [...Object.values(inflow), ...Object.values(backlog)].reduce((s, p) => s + p.count, 0)
@@ -327,7 +234,8 @@ export function step(state: SimState): SimState {
       continue
     }
 
-    const res = node.kind === 'sqldb' ? serveDb(node, inflow, chapter) : serveGeneric(node, instances, inflow, backlog, weights)
+    const ctx: ServeContext = { instances, inflow, backlog, chapter }
+    const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx, weights)
     fail(res.dropped)
     stats.stale += res.stale
 

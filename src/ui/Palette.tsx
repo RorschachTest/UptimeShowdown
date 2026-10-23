@@ -1,7 +1,7 @@
 import { COMPONENTS } from '../engine/components'
 import { useGameStore } from '../store'
 import { ComponentIcon } from './icons'
-import { COMPONENT_INFO, TYPE_COLORS, unlockedKinds } from './settings'
+import { TYPE_COLORS, unlockedKinds } from './settings'
 
 export const DRAG_MIME = 'application/x-uptime-component'
 
@@ -34,7 +34,7 @@ export function Palette() {
                   <span className="ml-auto rounded-md bg-read px-1.5 text-xs font-semibold text-piece">New</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-ink-soft">{COMPONENT_INFO[kind].blurb}</p>
+              <p className="mt-1 text-xs text-ink-soft">{COMPONENTS[kind].blurb}</p>
             </li>
           ))}
         </ul>

@@ -1,9 +1,9 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useRef } from 'react'
-import { CACHE_SIZES, CDN_HIT_RATE, COMPONENTS, DB_READ_RPS, DB_WRITE_RPS, MAX_REPLICAS, TIER_CAPACITY, TIER_LABELS } from '../../engine/components'
+import { COMPONENTS, getCount, TIER_LABELS } from '../../engine/components'
 import { useGameStore } from '../../store'
 import { fmtInt, fmtMs, loadStatus, statusColor } from '../format'
-import type { GameNode, GameNodeData } from '../graph'
+import type { GameNode } from '../graph'
 import { ComponentIcon } from '../icons'
 import { isUnlocked } from '../settings'
 
@@ -11,42 +11,22 @@ import { isUnlocked } from '../settings'
 const WHEEL_STEP = 100
 const MAX_STACKED_COPIES = 4
 
-function capacityLabel({ kind, instances, config }: GameNodeData): string {
-  const m = TIER_CAPACITY[config.tier]
-  switch (kind) {
-    case 'sqldb':
-      return `${fmtInt(DB_READ_RPS * m)} reads, ${fmtInt(DB_WRITE_RPS * m)} writes/s${config.replicas ? ` + ${config.replicas} replica${config.replicas > 1 ? 's' : ''}` : ''}`
-    case 'cache':
-      return `${config.cacheSize} · ~${Math.round(CACHE_SIZES[config.cacheSize].hitRate * 100)}% hits · ${config.writeStrategy === 'through' ? 'write-through' : 'cache-aside'}`
-    case 'cdn':
-      return `${config.cdnTtl} TTL · ~${Math.round(CDN_HIT_RATE[config.cdnTtl] * 100)}% hits`
-    default:
-      return `${fmtInt(COMPONENTS[kind].capacityRps * instances * (COMPONENTS[kind].tiered ? m : 1))} rps capacity`
-  }
-}
-
-/** Every placeable piece: icon, capacity, a load gauge, and stacked copies for extra instances or replicas. */
+/** Every placeable piece, drawn from its component definition: summary, gauge, scale-out copies. */
 export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
   const stats = useGameStore((s) => s.sim.nodeStats[id])
-  const replicasOpen = useGameStore((s) => isUnlocked(s.chapter, 'replicas', s.stageIndex))
-  const { scaleNode, updateConfig } = useGameStore.getState()
-  const spec = COMPONENTS[data.kind]
+  const def = COMPONENTS[data.kind]
+  const count = def.count
+  const countOpen = useGameStore((s) => count !== undefined && isUnlocked(s.chapter, count.gate, s.stageIndex))
+  const setCount = useGameStore((s) => s.setCount)
   const wheel = useRef(0)
-
-  // Scroll scales out: instances for web servers, read replicas for the database.
-  const scroll =
-    data.kind === 'app'
-      ? (dir: number) => scaleNode(id, dir)
-      : data.kind === 'sqldb' && replicasOpen
-        ? (dir: number) => updateConfig(id, { replicas: Math.min(MAX_REPLICAS, Math.max(0, data.config.replicas + dir)) })
-        : null
+  const value = count ? getCount(data, count.field) : 0
 
   const onWheel = (e: React.WheelEvent) => {
-    if (!scroll) return
+    if (!countOpen) return
     wheel.current += e.deltaY
     while (Math.abs(wheel.current) >= WHEEL_STEP) {
       const dir = wheel.current < 0 ? 1 : -1
-      scroll(dir)
+      setCount(id, getCount(useGameStore.getState().nodes.find((n) => n.id === id)!.data, count!.field) + dir)
       wheel.current += dir * WHEEL_STEP
     }
   }
@@ -55,15 +35,12 @@ export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
   const status = down ? 'bad' : loadStatus(stats?.load)
   const dropping = down || (stats?.droppedRps ?? 0) > 0.5
   const loadPct = Math.round((stats?.load ?? 0) * 100)
-  const copies = Math.min(data.kind === 'sqldb' ? data.config.replicas : data.instances - 1, MAX_STACKED_COPIES)
-  const showQueue = spec.queueTicks > 0 && (stats?.queued ?? 0) >= 1
+  // Instances count the piece itself; replicas are extra copies.
+  const copies = Math.min(count?.field === 'instances' ? value - 1 : value, MAX_STACKED_COPIES)
+  const showQueue = def.queueTicks > 0 && (stats?.queued ?? 0) >= 1
 
   return (
-    <div
-      className={`relative w-52 ${scroll ? 'nowheel' : ''}`}
-      onWheel={onWheel}
-      title={scroll ? (data.kind === 'app' ? 'Scroll to add or remove instances' : 'Scroll to add or remove read replicas') : 'Click for settings'}
-    >
+    <div className={`relative w-52 ${countOpen ? 'nowheel' : ''}`} onWheel={onWheel} title={countOpen ? count!.scrollHint : 'Click for settings'}>
       {Array.from({ length: copies }, (_, i) => (
         <div
           key={i}
@@ -78,17 +55,17 @@ export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
           <span style={{ color: statusColor[status] }}>
             <ComponentIcon kind={data.kind} />
           </span>
-          <span className="text-[15px] leading-tight font-semibold">{spec.label}</span>
+          <span className="text-[15px] leading-tight font-semibold">{def.label}</span>
           <span className="ml-auto flex gap-1">
-            {spec.tiered && (
+            {def.tiered && (
               <span className="rounded-md border-2 border-ink px-1 text-xs font-semibold" title="Machine size">
                 {TIER_LABELS[data.config.tier]}
               </span>
             )}
-            {data.kind === 'app' && <span className="rounded-md bg-ink px-1.5 py-0.5 text-xs font-semibold text-piece">×{data.instances}</span>}
+            {count?.field === 'instances' && <span className="rounded-md bg-ink px-1.5 py-0.5 text-xs font-semibold text-piece">×{value}</span>}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-ink-soft">{capacityLabel(data)}</p>
+        <p className="mt-0.5 text-xs text-ink-soft">{def.summary({ id, ...data })}</p>
 
         <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-board" role="meter" aria-label="Load" aria-valuenow={loadPct} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full transition-[width] duration-150" style={{ width: `${down ? 100 : Math.min(loadPct, 100)}%`, background: statusColor[status] }} />

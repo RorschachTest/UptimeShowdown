@@ -143,7 +143,7 @@ export interface SimState {
   /** Node ids in topological order. Nodes on a cycle are left out and never simulated. */
   order: string[]
   outEdges: Record<string, SimEdge[]>
-  /** App/all-in-one nodes with a load balancer in front: only these can use more than one instance. */
+  /** Nodes with a load balancer in front: only these can use more than one instance. */
   lbFed: Record<string, boolean>
   /** reach[nodeId][typeIndex][step]: can this node complete that request from that step? */
   reach: Record<string, boolean[][]>

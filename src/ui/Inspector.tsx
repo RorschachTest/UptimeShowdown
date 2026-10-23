@@ -1,9 +1,18 @@
-import { COMPONENTS, MAX_REPLICAS, nodeCostPerMin } from '../engine/components'
+import {
+  COMPONENTS,
+  getCount,
+  nodeCostPerMin,
+  type ChoiceSetting,
+  type CountSetting,
+  type ExpandAction,
+  type Tradeoff,
+} from '../engine/components'
+import type { SettingId } from '../engine/types'
 import { useGameStore } from '../store'
 import { fmtMs, loadStatus, statusColor } from './format'
 import type { GameNode } from './graph'
 import { ComponentIcon } from './icons'
-import { CHOICE_SETTINGS, COMPONENT_INFO, COUNT_INFO, isUnlocked, unlockStageOf, type ChoiceSetting, type Tradeoff } from './settings'
+import { isUnlocked, unlockStageOf } from './settings'
 
 function TradeoffCard({ solves, worsens }: Tradeoff) {
   return (
@@ -16,10 +25,6 @@ function TradeoffCard({ solves, worsens }: Tradeoff) {
   )
 }
 
-function Locked({ stage }: { stage: number | null }) {
-  return <p className="mt-1 text-xs text-ink-faint">{stage === null ? 'Not available in this chapter' : `Unlocks in stage ${stage + 1}`}</p>
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-ink/10 pt-3">
@@ -29,11 +34,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Choice({ node, setting }: { node: GameNode; setting: ChoiceSetting }) {
+/** Gate state for a setting: open, or the stage that opens it. */
+function useGate(gate: SettingId | undefined) {
   const chapter = useGameStore((s) => s.chapter)
   const stageIndex = useGameStore((s) => s.stageIndex)
+  const open = isUnlocked(chapter, gate, stageIndex)
+  const at = gate ? unlockStageOf(chapter, gate) : null
+  const note = open ? null : (
+    <p className="mt-1 text-xs text-ink-faint">{at === null ? 'Not available in this chapter' : `Unlocks in stage ${at + 1}`}</p>
+  )
+  return { open, note }
+}
+
+function Choice({ node, setting }: { node: GameNode; setting: ChoiceSetting }) {
   const updateConfig = useGameStore((s) => s.updateConfig)
-  const locked = setting.gate !== undefined && !isUnlocked(chapter, setting.gate, stageIndex)
+  const { open, note } = useGate(setting.gate)
   const current = node.data.config[setting.field]
   const selected = setting.options.find((o) => o.value === current)
 
@@ -46,7 +61,7 @@ function Choice({ node, setting }: { node: GameNode; setting: ChoiceSetting }) {
             type="button"
             role="radio"
             aria-checked={o.value === current}
-            disabled={locked}
+            disabled={!open}
             title={`Solves: ${o.solves}\nWorsens: ${o.worsens}`}
             onClick={() => updateConfig(node.id, { [setting.field]: o.value })}
             className={`rounded-md border-2 px-2 py-0.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
@@ -57,68 +72,80 @@ function Choice({ node, setting }: { node: GameNode; setting: ChoiceSetting }) {
           </button>
         ))}
       </div>
-      {locked ? <Locked stage={setting.gate ? unlockStageOf(chapter, setting.gate) : null} /> : selected && <TradeoffCard {...selected} />}
+      {note ?? (selected && <TradeoffCard {...selected} />)}
     </Section>
   )
 }
 
-function Count({ label, value, min, max, onChange, info, locked, lockStage }: {
-  label: string
-  value: number
-  min: number
-  max: number
-  onChange: (v: number) => void
-  info: Tradeoff
-  locked?: boolean
-  lockStage?: number | null
-}) {
+function Count({ node, setting }: { node: GameNode; setting: CountSetting }) {
+  const setCount = useGameStore((s) => s.setCount)
+  const { open, note } = useGate(setting.gate)
+  const value = getCount(node.data, setting.field)
   const btn = 'size-7 rounded-md border-2 border-ink bg-piece font-bold hover:bg-board disabled:opacity-30'
   return (
-    <Section title={label}>
+    <Section title={setting.label}>
       <div className="mt-1.5 flex items-center gap-2">
-        <button type="button" className={btn} disabled={locked || value <= min} onClick={() => onChange(value - 1)} aria-label={`Fewer ${label.toLowerCase()}`}>
+        <button type="button" className={btn} disabled={!open || value <= setting.min} onClick={() => setCount(node.id, value - 1)} aria-label={`Fewer ${setting.label.toLowerCase()}`}>
           −
         </button>
         <span className="w-8 text-center text-lg font-bold">{value}</span>
-        <button type="button" className={btn} disabled={locked || value >= max} onClick={() => onChange(value + 1)} aria-label={`More ${label.toLowerCase()}`}>
+        <button type="button" className={btn} disabled={!open || value >= setting.max} onClick={() => setCount(node.id, value + 1)} aria-label={`More ${setting.label.toLowerCase()}`}>
           +
         </button>
         <span className="text-xs text-ink-faint">or scroll over the piece</span>
       </div>
-      {locked ? <Locked stage={lockStage ?? null} /> : <TradeoffCard {...info} />}
+      {note ?? <TradeoffCard {...setting} />}
     </Section>
   )
 }
 
-/** Settings drawer for the selected piece. Every option shows what it solves and what it worsens. */
+function Action({ node, action, index }: { node: GameNode; action: ExpandAction; index: number }) {
+  const expandNode = useGameStore((s) => s.expandNode)
+  const { note } = useGate(action.gate)
+  return (
+    <Section title={action.label}>
+      {note ?? (
+        <>
+          <button
+            type="button"
+            onClick={() => expandNode(node.id, index)}
+            className="piece mt-1.5 w-full bg-ink py-1.5 text-sm font-bold text-piece active:translate-x-px active:translate-y-px"
+          >
+            {action.label}
+          </button>
+          <TradeoffCard {...action} />
+        </>
+      )}
+    </Section>
+  )
+}
+
+/** Settings drawer for the selected piece, rendered entirely from its component definition. */
 export function Inspector() {
   const node = useGameStore((s) => s.nodes.find((n) => n.selected && n.data.kind !== 'traffic'))
   const stats = useGameStore((s) => (node ? s.sim.nodeStats[node.id] : undefined))
-  const chapter = useGameStore((s) => s.chapter)
-  const stageIndex = useGameStore((s) => s.stageIndex)
-  const { deselect, scaleNode, updateConfig, splitNode } = useGameStore.getState()
+  const deselect = useGameStore((s) => s.deselect)
   if (!node) return null
 
-  const { kind } = node.data
-  const info = COMPONENT_INFO[kind]
+  const def = COMPONENTS[node.data.kind]
   const status = stats?.down ? 'bad' : loadStatus(stats?.load)
-  const cost = nodeCostPerMin({ id: node.id, kind, instances: node.data.instances, config: node.data.config })
+  const cost = nodeCostPerMin({ id: node.id, ...node.data })
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l-2 border-ink bg-panel p-4" aria-label={`${COMPONENTS[kind].label} settings`}>
+    <aside className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l-2 border-ink bg-panel p-4" aria-label={`${def.label} settings`}>
       <header className="flex items-start gap-2">
         <span style={{ color: statusColor[status] }} className="mt-0.5">
-          <ComponentIcon kind={kind} />
+          <ComponentIcon kind={def.kind} />
         </span>
         <div className="flex-1">
-          <h2 className="text-lg leading-tight font-bold">{COMPONENTS[kind].label}</h2>
-          <p className="text-sm text-ink-soft">{info.blurb}</p>
+          <h2 className="text-lg leading-tight font-bold">{def.label}</h2>
+          <p className="text-sm text-ink-soft">{def.blurb}</p>
         </div>
         <button type="button" onClick={deselect} className="rounded-md px-1.5 text-xl leading-none text-ink-soft hover:bg-board" aria-label="Close settings">
           ×
         </button>
       </header>
-      <TradeoffCard solves={info.solves} worsens={info.worsens} />
+      <TradeoffCard solves={def.solves} worsens={def.worsens} />
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
@@ -137,42 +164,12 @@ export function Inspector() {
         </div>
       </div>
 
-      {kind === 'allinone' && (
-        <Section title="Split tiers">
-          {isUnlocked(chapter, 'split', stageIndex) ? (
-            <>
-              <button
-                type="button"
-                onClick={() => splitNode(node.id)}
-                className="piece mt-1.5 w-full bg-ink py-1.5 text-sm font-bold text-piece active:translate-x-px active:translate-y-px"
-              >
-                Split into web server + database
-              </button>
-              <TradeoffCard solves="Web and data scale on their own, on separate machines." worsens="A network hop between them, and the database is now its own single point of failure." />
-            </>
-          ) : (
-            <Locked stage={unlockStageOf(chapter, 'split')} />
-          )}
-        </Section>
-      )}
-
-      {kind === 'app' && (
-        <Count label="Instances" value={node.data.instances} min={1} max={COMPONENTS.app.maxInstances} onChange={(v) => scaleNode(node.id, v - node.data.instances)} info={COUNT_INFO.instances} />
-      )}
-      {kind === 'sqldb' && (
-        <Count
-          label="Read replicas"
-          value={node.data.config.replicas}
-          min={0}
-          max={MAX_REPLICAS}
-          onChange={(v) => updateConfig(node.id, { replicas: v })}
-          info={COUNT_INFO.replicas}
-          locked={!isUnlocked(chapter, 'replicas', stageIndex)}
-          lockStage={unlockStageOf(chapter, 'replicas')}
-        />
-      )}
-      {CHOICE_SETTINGS.filter((s) => s.kinds.includes(kind)).map((s) => (
-        <Choice key={s.field} node={node} setting={s} />
+      {def.actions.map((a, i) => (
+        <Action key={a.label} node={node} action={a} index={i} />
+      ))}
+      {def.count && <Count node={node} setting={def.count} />}
+      {def.choices.map((c) => (
+        <Choice key={c.field} node={node} setting={c} />
       ))}
     </aside>
   )

@@ -193,6 +193,19 @@ describe('CDN', () => {
     expect(s.edgeRps['cdn>web']).toBeCloseTo(200)
   })
 
+  it('acts like a separate static hostname when wired beside the load balancer', () => {
+    // Static URLs go only to the CDN; dynamic requests skip it; misses are pulled from its origin.
+    const g = graph(
+      [['u', 'traffic'], ['cdn', 'cdn'], ['lb', 'lb'], ['web', 'app', 4], ['db', 'sqldb']],
+      ['u>cdn', 'u>lb', 'cdn>web', 'lb>web', 'web>db'],
+    )
+    const s = run(initSim(g, testChapter(1000, { static: 0.5, page: 0.5 }), 0), 10)
+    expect(s.edgeRps['u>cdn']).toBeCloseTo(500)
+    expect(s.edgeRps['u>lb']).toBeCloseTo(500)
+    expect(s.edgeRps['cdn>web']).toBeCloseTo(25)
+    expect(s.totals.errors).toBe(0)
+  })
+
   it('adds the distance penalty to static files served from the origin', () => {
     const g = graph([['u', 'traffic'], ['web', 'app', 1, { tier: 1 }]], ['u>web'])
     const s = run(initSim(g, testChapter(100, { static: 1 }), 0), 10)

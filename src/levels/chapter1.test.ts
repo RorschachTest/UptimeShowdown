@@ -88,6 +88,16 @@ describe('Chapter 1 traps fail the stage', () => {
     expect(r.missed.join(' ')).toMatch(/p95/)
   })
 
+  it('stage 5: a CDN on its own hostname (beside the load balancer) also earns three stars', () => {
+    const r = play(
+      4,
+      [['u', 'traffic'], ['cdn', 'cdn'], ['lb', 'lb'], ['web', 'app', 7], ['c', 'cache', 1, through], ['db', 'sqldb']],
+      ['u>cdn', 'u>lb', 'cdn>lb', 'lb>web', 'web>c', 'c>db'],
+    )
+    expect(r.missed).toEqual([])
+    expect(r.stars).toBe(3)
+  })
+
   it('stage 5: a short-TTL CDN misses too often', () => {
     const [nodes, wires] = reference[4]!
     const short = nodes.map((n) => (n[1] === 'cdn' ? (['cdn', 'cdn', 1, { cdnTtl: 'short' }] as N) : n))

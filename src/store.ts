@@ -37,10 +37,11 @@ interface GameStore {
   addComponent: (kind: ComponentKind, position: XYPosition) => void
   removeNode: (id: string) => void
   removeEdge: (id: string) => void
-  scaleNode: (id: string, delta: number) => void
+  /** Set the piece's scale-out count (instances or replicas), clamped to its component's range. */
+  setCount: (id: string, value: number) => void
   updateConfig: (id: string, patch: Partial<NodeConfig>) => void
-  /** Replace a single server with a web server wired to a SQL database. */
-  splitNode: (id: string) => void
+  /** Run one of the piece's expand actions: replace it with a wired chain of new pieces. */
+  expandNode: (id: string, actionIndex: number) => void
   deselect: () => void
 
   /** Run `ticks` simulation steps, publish once, and score the stage when its time is up. */
@@ -122,40 +123,37 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     removeEdge: (id) => commit(get().nodes, get().edges.filter((e) => e.id !== id)),
 
-    scaleNode: (id, delta) =>
+    setCount: (id, value) =>
       patchNode(id, (n) => {
-        const instances = Math.min(COMPONENTS[n.data.kind].maxInstances, Math.max(1, n.data.instances + delta))
-        return instances === n.data.instances ? n : { ...n, data: { ...n.data, instances } }
+        const setting = COMPONENTS[n.data.kind].count
+        if (!setting) return n
+        const v = Math.min(setting.max, Math.max(setting.min, value))
+        return setting.field === 'instances'
+          ? { ...n, data: { ...n.data, instances: v } }
+          : { ...n, data: { ...n.data, config: { ...n.data.config, replicas: v } } }
       }),
 
     updateConfig: (id, patch) => patchNode(id, (n) => ({ ...n, data: { ...n.data, config: { ...n.data.config, ...patch } } })),
 
-    splitNode: (id) => {
+    expandNode: (id, actionIndex) => {
       const { nodes, edges } = get()
       const box = nodes.find((n) => n.id === id)
-      if (!box || box.data.kind !== 'allinone') return
-      const web: GameNode = {
-        id: `app-${nextId++}`,
+      const action = box && COMPONENTS[box.data.kind].actions[actionIndex]
+      if (!box || !action) return
+      const parts: GameNode[] = action.into.map((p, i) => ({
+        id: `${p.kind}-${nextId++}`,
         type: 'component',
-        position: box.position,
-        data: { kind: 'app', instances: 1, config: DEFAULT_CONFIG },
-        selected: true,
-      }
-      const db: GameNode = {
-        id: `sqldb-${nextId++}`,
-        type: 'component',
-        position: { x: box.position.x + 40, y: box.position.y + 170 },
-        data: { kind: 'sqldb', instances: 1, config: DEFAULT_CONFIG },
-      }
-      const rewired = edges.map((e) => ({
-        ...e,
-        source: e.source === id ? web.id : e.source,
-        target: e.target === id ? web.id : e.target,
+        position: { x: box.position.x + p.dx, y: box.position.y + p.dy },
+        data: { kind: p.kind, instances: 1, config: DEFAULT_CONFIG },
+        selected: i === 0,
       }))
-      commit(
-        [...nodes.filter((n) => n.id !== id), web, db],
-        addEdge({ source: web.id, target: db.id, sourceHandle: null, targetHandle: null, type: 'flow' }, rewired),
-      )
+      const first = parts[0]!.id
+      // Wires into or out of the old piece attach to the first new one; the new pieces are chained.
+      let next = edges.map((e) => ({ ...e, source: e.source === id ? first : e.source, target: e.target === id ? first : e.target }))
+      for (let i = 1; i < parts.length; i++) {
+        next = addEdge({ source: parts[i - 1]!.id, target: parts[i]!.id, sourceHandle: null, targetHandle: null, type: 'flow' }, next)
+      }
+      commit([...nodes.filter((n) => n.id !== id), ...parts], next)
     },
 
     deselect: () => set({ nodes: get().nodes.map((n) => (n.selected ? { ...n, selected: false } : n)) }),
