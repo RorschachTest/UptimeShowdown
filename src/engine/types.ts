@@ -154,3 +154,54 @@ export interface SimState {
   totals: TickStats
   rng: number
 }
+
+// ── Interview levels (Chapter 3 shell, reused by later problem chapters) ──
+
+/** A hidden parameter of the problem, shown as "?" until a question reveals it. */
+export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency'
+
+export interface QuestionCard {
+  id: string
+  text: string
+  /** high = moves the architecture; low = harmless but wasted; trap = trivia or a solution posing as a question. */
+  leverage: 'high' | 'low' | 'trap'
+  answer: string
+  reveals: FactId[]
+  /** Short form of the answer, shown as a fact chip once revealed. */
+  short?: string
+}
+
+export interface FeatureCard {
+  id: string
+  text: string
+  core: boolean
+}
+
+export interface WrapUpOption {
+  id: string
+  text: string
+  correct: boolean
+}
+
+export interface WrapUpQuestion {
+  id: string
+  prompt: string
+  options: WrapUpOption[]
+  explain: string
+}
+
+export interface InterviewLevel {
+  id: string
+  title: string
+  prompt: string
+  questionBudget: number
+  questions: QuestionCard[]
+  features: FeatureCard[]
+  /** Request types plus exactly two stages: [main run, curveball]. */
+  chapter: Chapter
+  curveball: { title: string; story: string }
+  /** Max pieces the player may change during the deep dive. */
+  editBudget: number
+  /** Level-defined wrap-up questions (the bottleneck question is generated from the run). */
+  wrapUp: WrapUpQuestion[]
+}

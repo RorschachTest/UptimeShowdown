@@ -13,12 +13,15 @@ import { COMPONENTS, DEFAULT_CONFIG } from './engine/components'
 import { stageResult, type StageResult } from './engine/scoring'
 import { initSim, stageFinished, step, withGraph } from './engine/simulator'
 import type { Chapter, ComponentKind, NodeConfig, SimState } from './engine/types'
+import { afterRun, createInterviewSlice, freshInterview, type InterviewSlice } from './interviewSlice'
+import { LEVELS, type LevelId } from './levels'
 import { chapter1 } from './levels/chapter1'
 import { toSimGraph, type GameNode } from './ui/graph'
 
 export type Speed = 1 | 2 | 4
 
-interface GameStore {
+export interface GameStore extends InterviewSlice {
+  levelId: LevelId
   chapter: Chapter
   stageIndex: number
   /** Best stars per stage so far. */
@@ -51,6 +54,8 @@ interface GameStore {
   /** Restart the current stage with the current design. */
   reset: () => void
   goToStage: (index: number) => void
+  /** Switch to another level with a fresh board. */
+  openLevel: (id: LevelId) => void
 }
 
 const startNodes: GameNode[] = [
@@ -75,6 +80,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
   const freshSim = (stageIndex: number) => initSim(toSimGraph(get().nodes, get().edges), get().chapter, stageIndex)
 
   return {
+    ...createInterviewSlice(set, get),
+    levelId: 'ch1',
     chapter: chapter1,
     stageIndex: 0,
     best: chapter1.stages.map(() => 0),
@@ -160,9 +167,17 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     advance: (ticks) => {
       let sim = get().sim
-      for (let i = 0; i < ticks && !stageFinished(sim); i++) sim = step(sim)
-      if (!stageFinished(sim)) return set({ sim })
+      let interview = get().interview
+      // Interview runs record each piece's peak load for the wrap-up question.
+      const peaks = interview ? { ...interview.peaks } : null
+      for (let i = 0; i < ticks && !stageFinished(sim); i++) {
+        sim = step(sim)
+        if (peaks) for (const [id, s] of Object.entries(sim.nodeStats)) peaks[id] = Math.max(peaks[id] ?? 0, s.load)
+      }
+      if (interview && peaks) interview = { ...interview, peaks }
+      if (!stageFinished(sim)) return set({ sim, interview })
       const result = stageResult(sim)
+      if (interview) return set({ sim, running: false, result, interview: afterRun(interview, result, sim.graph) })
       const best = get().best.map((b, i) => (i === get().stageIndex ? Math.max(b, result.stars) : b))
       set({ sim, running: false, result, best })
     },
@@ -171,5 +186,22 @@ export const useGameStore = create<GameStore>()((set, get) => {
     setSpeed: (speed) => set({ speed }),
     reset: () => set({ running: false, result: null, sim: freshSim(get().stageIndex) }),
     goToStage: (index) => set({ stageIndex: index, running: false, result: null, sim: freshSim(index) }),
+
+    openLevel: (id) => {
+      const entry = LEVELS.find((l) => l.id === id)!
+      const chapter = entry.kind === 'ladder' ? entry.chapter : entry.level.chapter
+      set({
+        levelId: id,
+        chapter,
+        stageIndex: 0,
+        best: chapter.stages.map(() => 0),
+        nodes: startNodes,
+        edges: [],
+        sim: initSim(toSimGraph(startNodes, []), chapter, 0),
+        running: false,
+        result: null,
+        interview: entry.kind === 'interview' ? freshInterview(entry.level) : null,
+      })
+    },
   }
 })
