@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { Canvas } from './ui/Canvas'
+import { EstimateDesk } from './ui/estimate/EstimateDesk'
 import { HUD } from './ui/HUD'
 import { Inspector } from './ui/Inspector'
 import { InterviewBar } from './ui/interview/InterviewBar'
@@ -14,6 +15,14 @@ export default function App() {
   useGameLoop()
   const interview = useGameStore((s) => s.interview !== null)
   const scoping = useGameStore((s) => s.interview?.phase === 'scope')
+  const estimating = useGameStore((s) => s.estimate !== null)
+  if (estimating)
+    return (
+      <div className="flex h-full flex-col">
+        <HUD />
+        <EstimateDesk />
+      </div>
+    )
   return (
     <ReactFlowProvider>
       <div className="flex h-full flex-col">
