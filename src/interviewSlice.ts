@@ -57,14 +57,21 @@ export function afterRun(iv: InterviewState, result: StageResult, graph: Graph):
 
 export interface InterviewSlice {
   interview: InterviewState | null
+  /** Ask a question, or un-ask it while still scoping (the question is refunded). */
   ask: (questionId: string) => void
   toggleFeature: (featureId: string) => void
+  /** Clear every question and scope choice. */
+  restartScope: () => void
   finishScope: () => void
   /** Open the interviewer's review of the current design. */
   propose: () => void
   closeReview: () => void
   /** Accept the review and run the main stage. */
   startRun: () => void
+  /** Back to Propose after a run, keeping the board, to change the design and run again. */
+  reviseDesign: () => void
+  /** Return to an earlier step (Scope or Propose) with the board intact; later results are cleared. */
+  goBackTo: (phase: 'scope' | 'propose') => void
   startDeepDive: () => void
   answer: (questionId: string, optionId: string) => void
   finishWrapUp: () => void
@@ -85,8 +92,9 @@ export function createInterviewSlice(set: Set, get: Get): InterviewSlice {
 
     ask: (id) => {
       const iv = get().interview
-      if (!iv || iv.asked.includes(id) || iv.asked.length >= iv.level.questionBudget) return
-      update({ asked: [...iv.asked, id] })
+      if (!iv || iv.phase !== 'scope') return
+      if (iv.asked.includes(id)) return update({ asked: iv.asked.filter((q) => q !== id) })
+      if (iv.asked.length < iv.level.questionBudget) update({ asked: [...iv.asked, id] })
     },
 
     toggleFeature: (id) => {
@@ -94,6 +102,8 @@ export function createInterviewSlice(set: Set, get: Get): InterviewSlice {
       if (!iv) return
       update({ inScope: iv.inScope.includes(id) ? iv.inScope.filter((f) => f !== id) : [...iv.inScope, id] })
     },
+
+    restartScope: () => update({ asked: [], inScope: [] }),
 
     finishScope: () => update({ phase: 'propose' }),
 
@@ -108,6 +118,13 @@ export function createInterviewSlice(set: Set, get: Get): InterviewSlice {
       get().goToStage(0)
       update({ review: null, phase: 'run', peaks: {}, runResult: null })
       set({ running: true })
+    },
+
+    reviseDesign: () => get().goBackTo('propose'),
+
+    goBackTo: (phase) => {
+      get().goToStage(0)
+      update({ phase, review: null, runResult: null, deepResult: null, snapshot: null, peaks: {}, wrapQuestions: [], answers: {} })
     },
 
     startDeepDive: () => {

@@ -7,7 +7,7 @@ export function revealedFacts(level: InterviewLevel, asked: string[]): Set<FactI
 }
 
 export interface ReviewNote {
-  tone: 'ok' | 'warn'
+  tone: 'ok' | 'info' | 'warn'
   text: string
 }
 
@@ -41,9 +41,16 @@ export function reviewDesign(state: SimState, level: InterviewLevel, asked: stri
   const cost = graphCostPerMin(state.graph)
   if (cost > stage.budget) warn(`This costs ${cost}/min; the budget is ${stage.budget}/min.`)
 
-  for (const q of level.questions) if (q.leverage === 'high' && !asked.includes(q.id)) warn(`You never asked: "${q.text}"`)
+  // The budget can't cover every useful question, so only call out ones a wasted question could have bought.
+  const askedCards = level.questions.filter((q) => asked.includes(q.id))
+  let spare = level.questionBudget - askedCards.filter((q) => q.leverage === 'high').length
+  for (const q of level.questions) {
+    if (q.leverage !== 'high' || asked.includes(q.id)) continue
+    if (spare-- > 0) warn(`You had a question to spare. You could have asked: "${q.text}"`)
+    else notes.push({ tone: 'info', text: `Unknown going in: "${q.text}" Leave some headroom.` })
+  }
 
-  if (notes.length === 0) notes.push({ tone: 'ok', text: "Looks reasonable. Let's see it under load." })
+  if (!notes.some((n) => n.tone === 'warn')) notes.unshift({ tone: 'ok', text: "Looks reasonable. Let's see it under load." })
   return notes
 }
 

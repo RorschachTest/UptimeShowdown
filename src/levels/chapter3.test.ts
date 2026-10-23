@@ -67,7 +67,21 @@ describe('interviewer review', () => {
     const text = reviewDesign(s, chapter3, ['scale']).map((n) => n.text).join('\n')
     expect(text).toMatch(/single Web Server/)
     expect(text).toMatch(/Nothing in your design can serve "Feed view"/)
-    expect(text).toMatch(/You never asked: "Where are the users\?"/)
+    expect(text).toMatch(/question to spare\. You could have asked: "Where are the users\?"/)
+  })
+
+  it('does not blame the player for the one fact a full budget of good questions leaves unknown', () => {
+    const s = initSim(graph(design(6, 0), wires), ch, 0)
+    const notes = reviewDesign(s, chapter3, ['scale', 'mix', 'where', 'fresh', 'failure'])
+    expect(notes.filter((n) => n.tone === 'warn')).toEqual([])
+    expect(notes[0]!.tone).toBe('ok')
+    expect(notes.find((n) => n.tone === 'info')?.text).toMatch(/How fast must the feed load\?/)
+  })
+
+  it('points at a missed question when one was spent on a trap', () => {
+    const s = initSim(graph(design(6, 0), wires), ch, 0)
+    const warns = reviewDesign(s, chapter3, ['scale', 'mix', 'where', 'fresh', 'kafka']).filter((n) => n.tone === 'warn')
+    expect(warns.map((n) => n.text)).toEqual(['You had a question to spare. You could have asked: "What should happen when a server dies?"'])
   })
 
   it('flags extra instances without a load balancer', () => {

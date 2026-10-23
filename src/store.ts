@@ -184,7 +184,14 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     setRunning: (running) => set({ running }),
     setSpeed: (speed) => set({ speed }),
-    reset: () => set({ running: false, result: null, sim: freshSim(get().stageIndex) }),
+    reset: () => {
+      const iv = get().interview
+      // In an interview, resetting the main run means going back to revise the design;
+      // in the deep dive it restarts the curveball (the change count is kept).
+      if (iv?.phase === 'run') return get().reviseDesign()
+      if (iv?.phase === 'deepdive') set({ interview: { ...iv, deepResult: null, peaks: {} } })
+      set({ running: false, result: null, sim: freshSim(get().stageIndex) })
+    },
     goToStage: (index) => set({ stageIndex: index, running: false, result: null, sim: freshSim(index) }),
 
     openLevel: (id) => {

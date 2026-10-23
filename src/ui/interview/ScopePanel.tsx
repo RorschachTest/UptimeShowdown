@@ -10,7 +10,7 @@ const VERDICT = {
 /** Step 1: ask a few questions (each high-value one reveals a hidden fact), then cut the scope. */
 export function ScopePanel() {
   const iv = useGameStore((s) => s.interview)!
-  const { ask, toggleFeature, finishScope } = useGameStore.getState()
+  const { ask, toggleFeature, finishScope, restartScope } = useGameStore.getState()
   const left = iv.level.questionBudget - iv.asked.length
 
   return (
@@ -20,7 +20,8 @@ export function ScopePanel() {
           <p className="text-sm text-ink-soft">The interviewer says:</p>
           <h2 className="mt-1 text-2xl leading-snug font-bold">{iv.level.prompt}</h2>
           <p className="mt-2 max-w-[70ch] text-sm text-ink-soft">
-            Don't draw anything yet. Ask the questions that would change your design. You only get {iv.level.questionBudget}.
+            Don't draw anything yet. Ask the questions that would change your design. You only get {iv.level.questionBudget}; click an
+            asked question to take it back.
           </p>
         </section>
 
@@ -88,9 +89,19 @@ export function ScopePanel() {
                 )
               })}
             </ul>
-            <button type="button" onClick={finishScope} className="piece mt-5 w-full bg-ink py-2 font-bold text-piece active:translate-x-px active:translate-y-px">
-              Start designing
-            </button>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={restartScope}
+                disabled={iv.asked.length === 0 && iv.inScope.length === 0}
+                className="rounded-lg border-2 border-ink px-3 py-2 text-sm font-semibold hover:bg-board disabled:opacity-40"
+              >
+                Start over
+              </button>
+              <button type="button" onClick={finishScope} className="piece flex-1 bg-ink py-2 font-bold text-piece active:translate-x-px active:translate-y-px">
+                Start designing
+              </button>
+            </div>
           </section>
         </div>
       </div>

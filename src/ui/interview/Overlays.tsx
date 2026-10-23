@@ -24,10 +24,10 @@ function Review() {
       <ul className="mt-3 flex flex-col gap-2 text-sm">
         {notes.map((n) => (
           <li key={n.text} className="flex gap-2">
-            <span className={n.tone === 'ok' ? 'text-ok' : 'text-warn'} aria-hidden="true">
-              {n.tone === 'ok' ? '✓' : '!'}
+            <span className={{ ok: 'text-ok', info: 'text-ink-soft', warn: 'text-warn' }[n.tone]} aria-hidden="true">
+              {{ ok: '✓', info: 'i', warn: '!' }[n.tone]}
             </span>
-            <span>{n.text}</span>
+            <span className={n.tone === 'info' ? 'text-ink-soft' : undefined}>{n.text}</span>
           </li>
         ))}
       </ul>
