@@ -157,6 +157,12 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 6h6M4 12h6M4 18h6M10 6l5 6-5 6M15 12h5" />
     </>
   ),
+  wallet: (
+    <>
+      <rect x="3" y="6" width="18" height="13" rx="2" />
+      <path d="M3 10h18M16 14.5h2" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

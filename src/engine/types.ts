@@ -1,7 +1,7 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub' | 'blob' | 'blocksrv' | 'broker' | 'aggregator'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub' | 'blob' | 'blocksrv' | 'broker' | 'aggregator' | 'wallet'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
 export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push' | 'publish' | 'blob' | 'chunk' | 'aggregate'
@@ -40,6 +40,7 @@ export type BrokerCommit = 'before' | 'after'
 export type AggLate = 'drop' | 'watermark'
 export type AggKeys = 'byAd' | 'split'
 export type DbConcurrency = 'none' | 'pessimistic' | 'optimistic'
+export type WalletTx = 'none' | 'twoPhase' | 'saga' | 'eventSourcing'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -93,6 +94,7 @@ export interface NodeConfig {
   aggKeys: AggKeys
   dbConcurrency: DbConcurrency
   appIdempotent: boolean
+  walletTx: WalletTx
 }
 
 export interface SimNode {

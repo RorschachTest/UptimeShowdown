@@ -23,6 +23,7 @@ import { defineComponent, type ComponentDef, type CountSetting } from './shared'
 import { sqldb } from './sqldb'
 import { trie } from './trie'
 import { tsdb } from './tsdb'
+import { wallet } from './wallet'
 import { worker } from './worker'
 import { wsgateway } from './wsgateway'
 
@@ -42,7 +43,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker, aggregator }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker, aggregator, wallet }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -95,6 +96,7 @@ export const DEFAULT_CONFIG: NodeConfig = {
   aggKeys: 'byAd',
   dbConcurrency: 'none',
   appIdempotent: false,
+  walletTx: 'none',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
