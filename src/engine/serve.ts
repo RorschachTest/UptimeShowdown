@@ -3,7 +3,10 @@ import { addFlow, parseKey, TICK_MS, TICKS_PER_SEC } from './flows'
 import type { Flows, SimNode } from './types'
 
 /** Default serving model: one capacity pool in weighted units, with an optional backlog. */
-export function serveGeneric(node: SimNode, { instances, inflow, backlog, chapter }: ServeContext): Served {
+/** Backlog a queue-fed node may hold, in ticks of its capacity (a minute). */
+export const BUFFER_TICKS = 600
+
+export function serveGeneric(node: SimNode, { instances, inflow, backlog, chapter, buffered }: ServeContext, queueTicks?: number): Served {
   const def = COMPONENTS[node.kind]
   const weights = chapter.requestTypes.map((rt) => rt.weight)
   const capTick = (def.capacityRps * instances * tierMult(def, node.config.tier)) / TICKS_PER_SEC
@@ -16,7 +19,8 @@ export function serveGeneric(node: SimNode, { instances, inflow, backlog, chapte
   const demand = units(all) / capTick
   const serveScale = demand > def.maxUtil ? def.maxUtil / demand : 1
   const leftoverUtil = demand - demand * serveScale
-  const keepScale = leftoverUtil > def.queueTicks ? def.queueTicks / leftoverUtil : 1
+  const limit = queueTicks ?? (buffered ? BUFFER_TICKS : def.queueTicks)
+  const keepScale = leftoverUtil > limit ? limit / leftoverUtil : 1
 
   const served: Flows = {}
   const queue: Flows = {}

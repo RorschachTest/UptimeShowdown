@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -24,6 +24,7 @@ export type IdClock = 'trust' | 'wait'
 export type GeoIndex = 'scan' | 'grid' | 'geohash' | 'quadtree'
 export type BoardStore = 'sql' | 'zset'
 export type BoardShard = 'hash' | 'score'
+export type ProviderRetry = 'drop' | 'retry'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -48,6 +49,8 @@ export interface NodeConfig {
   boardStore: BoardStore
   boardShard: BoardShard
   boardReplica: boolean
+  providerRetry: ProviderRetry
+  providerDedupe: boolean
 }
 
 export interface SimNode {
@@ -84,6 +87,8 @@ export interface RequestType {
   burst?: number
   /** Share of these writes that race another write to the same key (two devices, two tabs). */
   conflicts?: number
+  /** The user is answered once this step is done; later steps run in the background (lag, not latency; losses are violations). */
+  asyncAfter?: Capability
 }
 
 export interface TrafficPoint {
@@ -96,7 +101,7 @@ export interface TrafficPoint {
 export interface SimEvent {
   t: number
   /** crash: one instance down for durationS. nodeLeave / nodeJoin: a cluster member leaves or joins at t. */
-  kind: 'crash' | 'nodeLeave' | 'nodeJoin' | 'partition' | 'clockSkew'
+  kind: 'crash' | 'nodeLeave' | 'nodeJoin' | 'partition' | 'clockSkew' | 'outage'
   target: ComponentKind
   durationS?: number
   /** partition: how many nodes are cut off (default 1). */
@@ -137,6 +142,8 @@ export interface Stage {
     maxThrottledRate?: number
     /** Max count of each correctness violation over the run (see Chapter.violationLabels). */
     maxViolations?: Record<string, number>
+    /** Max p95 background lag (enqueue to done), ms. */
+    maxLagMs?: number
   }
 }
 
@@ -209,6 +216,9 @@ export interface TickStats {
   /** Correctness violations by id (duplicates, lost writes, …), counted per request. */
   violations: Record<string, number>
   latencyHist: number[]
+  /** Background work finished (async request types), and how long it took end to end. */
+  bgDone: number
+  bgLatencyHist: number[]
 }
 
 export interface SimState {
@@ -221,6 +231,8 @@ export interface SimState {
   outEdges: Record<string, SimEdge[]>
   /** Nodes with a load balancer in front: only these can use more than one instance. */
   lbFed: Record<string, boolean>
+  /** Nodes fed by a buffering piece (a queue): they can hold a long backlog. */
+  buffered: Record<string, boolean>
   /** reach[nodeId][typeIndex][step]: can this node complete that request from that step? */
   reach: Record<string, boolean[][]>
   runtime: Record<string, NodeRuntime>
