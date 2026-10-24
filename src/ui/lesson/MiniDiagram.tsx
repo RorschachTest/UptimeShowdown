@@ -109,10 +109,22 @@ function layout(spec: DiagramSpec) {
   for (const [id] of spec.nodes) (perColumn[depth[id]!] ??= []).push(id)
   const layers = Math.max(...Object.values(depth)) + 1
   const vertical = layers >= VERTICAL_FROM
+  const gap = vertical ? SIDE : ROW
+  // Place each piece across from the average of its parents, then push neighbours apart, layer by layer,
+  // so wires that skip a layer don't run through the pieces in between.
+  const across: Record<string, number> = {}
+  for (let d = 0; d < layers; d++) {
+    const ids = perColumn[d] ?? []
+    const want = ids.map((id, i) => {
+      const parents = wires.filter((w) => w.b === id && depth[w.a]! < d).map((w) => across[w.a]!)
+      return { id, x: parents.length ? parents.reduce((s, x) => s + x, 0) / parents.length : (i - (ids.length - 1) / 2) * gap }
+    })
+    want.sort((p, q) => p.x - q.x)
+    for (let i = 1; i < want.length; i++) want[i]!.x = Math.max(want[i]!.x, want[i - 1]!.x + gap)
+    for (const w of want) across[w.id] = w.x
+  }
   const nodes: Node<DiagramNodeData>[] = spec.nodes.map(([id, kind, info]) => {
-    const col = perColumn[depth[id]!]!
-    const across = col.indexOf(id) - (col.length - 1) / 2
-    const position = vertical ? { x: across * SIDE, y: depth[id]! * LAYER } : { x: depth[id]! * COLUMN, y: across * ROW }
+    const position = vertical ? { x: across[id]!, y: depth[id]! * LAYER } : { x: depth[id]! * COLUMN, y: across[id]! }
     return { id, type: 'piece', data: { kind, ...info, vertical }, position }
   })
   const edges: Edge[] = wires.map(({ a, b, label }) => ({
