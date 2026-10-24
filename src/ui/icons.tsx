@@ -124,6 +124,12 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 8h12l-3-3M20 16H8l3 3" />
     </>
   ),
+  pubsub: (
+    <>
+      <circle cx="6" cy="12" r="2.5" />
+      <path d="M8.5 12h3M11.5 12l6-6M11.5 12l6 6M11.5 12h7" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />
