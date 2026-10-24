@@ -48,6 +48,7 @@ export function createEstimateSlice(set: Set, get: Get): EstimateSlice {
         const grades = { ...e.grades, [qid]: grade }
         const stars = stageStars(stage, grades)
         const best = stars === null ? e.best : e.best.map((b, i) => (i === e.stageIndex ? Math.max(b, stars) : b))
+        if (stars !== null) get().recordStars(get().chapterId, Math.floor(best.reduce((s, b) => s + b, 0) / best.length))
         return { grades, best }
       }),
 

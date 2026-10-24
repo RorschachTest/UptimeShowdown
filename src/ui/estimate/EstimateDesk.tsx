@@ -1,24 +1,6 @@
 import { stageStars } from '../../engine/estimate'
-import type { EstimateQuestion } from '../../engine/types'
 import { useGameStore } from '../../store'
-import { Equation, Order, Pick, type QuestionProps } from './questions'
-
-/** One renderer per question kind; a new kind adds a component here. */
-function QuestionBody(props: QuestionProps<EstimateQuestion>) {
-  const q = props.question
-  if (q.kind === 'pick') return <Pick {...props} question={q} />
-  if (q.kind === 'order') return <Order {...props} question={q} />
-  return <Equation {...props} question={q} />
-}
-
-function Stars({ n, size = 'text-base' }: { n: number; size?: string }) {
-  return (
-    <span className={`${size} tracking-wider text-warn`} aria-label={`${n} of 3 stars`}>
-      {'★'.repeat(n)}
-      <span className="text-ink-faint">{'★'.repeat(3 - n)}</span>
-    </span>
-  )
-}
+import { QuestionCard, Stars } from './QuestionCard'
 
 /** Chapter 2: stages of estimation questions, answered with the mouse and graded by order of magnitude. */
 export function EstimateDesk() {
@@ -66,39 +48,18 @@ export function EstimateDesk() {
             <p className="mt-1 max-w-[65ch] text-ink-soft">{stage.story}</p>
           </header>
 
-          {stage.questions.map((q, i) => {
-            const grade = e.grades[q.id]
-            const answer = e.answers[q.id]
-            return (
-              <section key={q.id} className="piece px-5 py-4" aria-label={`Question ${i + 1}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-semibold">{q.prompt}</h3>
-                  {grade && <Stars n={grade.stars} />}
-                </div>
-                <div className="mt-3">
-                  <QuestionBody question={q} answer={answer} locked={!!grade} onAnswer={(a) => setAnswer(q.id, a)} />
-                </div>
-                {grade ? (
-                  <div className="mt-3 rounded-lg bg-board px-3 py-2 text-sm">
-                    <p className={`font-semibold ${grade.stars > 0 ? 'text-ok' : 'text-bad'}`}>{grade.message}</p>
-                    <p className="mt-1 text-ink-soft">{q.explain}</p>
-                    <button type="button" onClick={() => retryQuestion(q.id)} className="mt-2 rounded-lg border-2 border-ink px-2.5 py-1 text-xs font-semibold hover:bg-piece">
-                      Try again
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!answer}
-                    onClick={() => checkAnswer(q.id)}
-                    className="piece mt-3 bg-ink px-3 py-1.5 text-sm font-bold text-piece disabled:opacity-40"
-                  >
-                    Check
-                  </button>
-                )}
-              </section>
-            )
-          })}
+          {stage.questions.map((q, i) => (
+            <QuestionCard
+              key={q.id}
+              index={i}
+              question={q}
+              answer={e.answers[q.id]}
+              grade={e.grades[q.id]}
+              onAnswer={(a) => setAnswer(q.id, a)}
+              onCheck={() => checkAnswer(q.id)}
+              onRetry={() => retryQuestion(q.id)}
+            />
+          ))}
 
           {stars !== null && (
             <section className="flex items-center justify-between gap-3 rounded-xl border-2 border-ink bg-piece px-5 py-3" role="status">

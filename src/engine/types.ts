@@ -106,12 +106,23 @@ export interface Stage {
   }
 }
 
+/** Level-specific structural rules: designs that break them are illegal, not just weak. */
+export interface LevelRules {
+  /** A piece of this kind must be on the board. */
+  requires?: { kind: ComponentKind; min?: number; why: string }[]
+  /** Every request of these types must pass through a piece of this kind (no bypass wires). */
+  mustPassThrough?: { types: string[]; kind: ComponentKind; why: string }[]
+  /** This kind may not be used in this level. */
+  forbid?: { kind: ComponentKind; why: string }[]
+}
+
 export interface Chapter {
   id: string
   title: string
   requestTypes: RequestType[]
   stages: Stage[]
   seed: number
+  rules?: LevelRules
 }
 
 /** A batch of requests of one type at one step of its needs, with their average latency so far. */
@@ -294,4 +305,24 @@ export interface EstimateLevel {
   id: string
   title: string
   stages: EstimateStage[]
+}
+
+// ── Lessons (the Learn step before every chapter's hands-on) ──
+
+export interface LessonCard {
+  title: string
+  body: string
+  /** What the idea or component buys you, and what it costs. */
+  solves?: string
+  worsens?: string
+  /** A small read-only diagram: pieces and 'a>b' wires, laid out left to right. */
+  diagram?: { nodes: [id: string, kind: ComponentKind][]; wires: string[] }
+}
+
+export interface Lesson {
+  /** One line on what this chapter teaches. */
+  summary: string
+  cards: LessonCard[]
+  /** Short check, graded with the estimation question kinds. */
+  quiz: EstimateQuestion[]
 }

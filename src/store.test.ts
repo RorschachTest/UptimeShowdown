@@ -32,7 +32,7 @@ describe('generic component actions', () => {
 describe('interview flow controls', () => {
   it('lets the player un-ask a question and start the scope over', () => {
     const s = useGameStore.getState()
-    s.openLevel('ch3')
+    s.openChapter('v1-03', 'play')
     s.ask('scale')
     s.ask('kafka')
     s.ask('kafka')
@@ -44,7 +44,7 @@ describe('interview flow controls', () => {
 
   it('goes back to Propose with the board intact when the main run is reset', () => {
     const s = useGameStore.getState()
-    s.openLevel('ch3')
+    s.openChapter('v1-03', 'play')
     s.finishScope()
     s.addComponent('app', { x: 0, y: 0 })
     s.startRun()
@@ -61,7 +61,7 @@ describe('interview flow controls', () => {
 describe('going back', () => {
   it('returns from the deep dive to scope with the design kept and later results cleared', () => {
     const s = useGameStore.getState()
-    s.openLevel('ch3')
+    s.openChapter('v1-03', 'play')
     s.ask('scale')
     s.finishScope()
     s.addComponent('app', { x: 0, y: 0 })

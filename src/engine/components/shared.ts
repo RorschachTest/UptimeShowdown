@@ -62,6 +62,12 @@ export interface ServeContext {
   stage: Stage
 }
 
+/** What a component's placement() sees: the kinds wired into and out of it. */
+export interface PlacementContext {
+  parents: ComponentKind[]
+  children: ComponentKind[]
+}
+
 /** What a component's review() sees: enough to judge its own configuration. */
 export interface ReviewContext {
   /** Whether a load balancer or other router sits in front of this node. */
@@ -103,6 +109,8 @@ export interface ComponentDef extends Tradeoff {
   serve?: (node: SimNode, ctx: ServeContext) => Served
   /** Interviewer notes about this piece's own configuration. */
   review?: (node: SimNode, ctx: ReviewContext) => string[]
+  /** A hard rule about where this piece may sit; returns the problem, or null when placed legally. */
+  placement?: (ctx: PlacementContext) => string | null
 }
 
 /** Vertical scaling: capacity doubles per size, cost rises faster (the "cost knee"). */

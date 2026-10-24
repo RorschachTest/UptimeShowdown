@@ -1,4 +1,4 @@
-import { bottleneckQuestion, reviewDesign, type ReviewNote } from './engine/interview'
+import { bottleneckQuestion, changedPieces, interviewReport, reviewDesign, scopeScore, type Report, type ReviewNote } from './engine/interview'
 import type { StageResult } from './engine/scoring'
 import type { Graph, InterviewLevel, WrapUpQuestion } from './engine/types'
 import type { GameStore } from './store'
@@ -29,6 +29,8 @@ export interface InterviewState {
   peaks: Record<string, number>
   wrapQuestions: WrapUpQuestion[]
   answers: Record<string, string>
+  /** Set when the wrap-up is finished. */
+  report: Report | null
 }
 
 export function freshInterview(level: InterviewLevel): InterviewState {
@@ -44,6 +46,7 @@ export function freshInterview(level: InterviewLevel): InterviewState {
     peaks: {},
     wrapQuestions: [],
     answers: {},
+    report: null,
   }
 }
 
@@ -124,7 +127,7 @@ export function createInterviewSlice(set: Set, get: Get): InterviewSlice {
 
     goBackTo: (phase) => {
       get().goToStage(0)
-      update({ phase, review: null, runResult: null, deepResult: null, snapshot: null, peaks: {}, wrapQuestions: [], answers: {} })
+      update({ phase, review: null, runResult: null, deepResult: null, snapshot: null, peaks: {}, wrapQuestions: [], answers: {}, report: null })
     },
 
     startDeepDive: () => {
@@ -137,6 +140,20 @@ export function createInterviewSlice(set: Set, get: Get): InterviewSlice {
       if (iv && !(qid in iv.answers)) update({ answers: { ...iv.answers, [qid]: optionId } })
     },
 
-    finishWrapUp: () => update({ phase: 'done' }),
+    finishWrapUp: () => {
+      const iv = get().interview
+      if (!iv?.runResult || !iv.deepResult) return
+      const report = interviewReport({
+        scope: scopeScore(iv.level, iv.asked, iv.inScope),
+        run: iv.runResult,
+        deep: iv.deepResult,
+        changes: iv.snapshot ? changedPieces(iv.snapshot, graphNow()) : 0,
+        editBudget: iv.level.editBudget,
+        wrapUpCorrect: iv.wrapQuestions.filter((q) => q.options.find((o) => o.id === iv.answers[q.id])?.correct).length,
+        wrapUpTotal: iv.wrapQuestions.length,
+      })
+      update({ phase: 'done', report })
+      get().recordStars(get().chapterId, report.stars)
+    },
   }
 }

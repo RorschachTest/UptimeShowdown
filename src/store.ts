@@ -10,19 +10,30 @@ import {
 } from '@xyflow/react'
 import { create } from 'zustand'
 import { COMPONENTS, DEFAULT_CONFIG } from './engine/components'
-import { stageResult, type StageResult } from './engine/scoring'
+import { judgeRun } from './engine/judge'
+import { checkDesign, type RuleIssue } from './engine/rules'
+import type { StageResult } from './engine/scoring'
 import { initSim, stageFinished, step, withGraph } from './engine/simulator'
 import type { Chapter, ComponentKind, NodeConfig, SimState } from './engine/types'
 import { createEstimateSlice, freshEstimate, type EstimateSlice } from './estimateSlice'
 import { afterRun, createInterviewSlice, freshInterview, type InterviewSlice } from './interviewSlice'
-import { LEVELS, type LevelId } from './levels'
+import { createLessonSlice, freshLesson, type LessonSlice } from './lessonSlice'
+import { CHAPTERS, chapterById } from './levels'
+import { loadProgress, saveProgress, type ChapterProgress } from './progress'
 import { chapter1 } from './levels/chapter1'
 import { toSimGraph, type GameNode } from './ui/graph'
 
 export type Speed = 1 | 2 | 4
 
-export interface GameStore extends InterviewSlice, EstimateSlice {
-  levelId: LevelId
+export type View = 'campaign' | 'lesson' | 'play'
+
+export interface GameStore extends InterviewSlice, EstimateSlice, LessonSlice {
+  chapterId: string
+  view: View
+  /** Best stars and lesson status per chapter, saved in this browser. */
+  progress: Record<string, ChapterProgress>
+  /** Chapter whose Play state is set up (so Learn ↔ Play keeps the board). */
+  playReadyFor: string | null
   chapter: Chapter
   stageIndex: number
   /** Best stars per stage so far. */
@@ -34,6 +45,10 @@ export interface GameStore extends InterviewSlice, EstimateSlice {
   speed: Speed
   /** Set when the current stage's run finishes. */
   result: StageResult | null
+  /** Rule check of the current design for the current stage; `block` issues stop Run and stars. */
+  issues: RuleIssue[]
+  /** The design changed while the current run was in progress, so it can't earn stars. */
+  runEdited: boolean
 
   onNodesChange: (changes: NodeChange<GameNode>[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
@@ -55,8 +70,12 @@ export interface GameStore extends InterviewSlice, EstimateSlice {
   /** Restart the current stage with the current design. */
   reset: () => void
   goToStage: (index: number) => void
-  /** Switch to another level with a fresh board. */
-  openLevel: (id: LevelId) => void
+  /** Open a chapter at its lesson or its play step. Play starts on a fresh board. */
+  openChapter: (id: string, view?: Exclude<View, 'campaign'>) => void
+  /** Switch view; entering Play for a chapter sets its board up once. */
+  setView: (view: View) => void
+  recordStars: (chapterId: string, stars: number) => void
+  markLearned: (chapterId: string) => void
 }
 
 const startNodes: GameNode[] = [
@@ -73,17 +92,34 @@ let nextId = 1
 
 export const useGameStore = create<GameStore>()((set, get) => {
   /** Apply a graph edit and hand the new topology to the running sim. */
-  const commit = (nodes: GameNode[], edges: Edge[]) =>
-    set({ nodes, edges, sim: withGraph(get().sim, toSimGraph(nodes, edges)) })
+  const commit = (nodes: GameNode[], edges: Edge[]) => {
+    const { sim, chapter, stageIndex, result } = get()
+    const graph = toSimGraph(nodes, edges)
+    // Editing part-way through a run is allowed for experimenting, but that run no longer counts.
+    const midRun = sim.tick > 0 && !result
+    set({ nodes, edges, sim: withGraph(sim, graph), issues: checkDesign(graph, chapter, stageIndex), ...(midRun ? { runEdited: true } : {}) })
+  }
 
   const patchNode = (id: string, fn: (n: GameNode) => GameNode) => commit(get().nodes.map((n) => (n.id === id ? fn(n) : n)), get().edges)
 
   const freshSim = (stageIndex: number) => initSim(toSimGraph(get().nodes, get().edges), get().chapter, stageIndex)
+  /** A clean start for a stage: new sim, fresh rule check, no edits recorded. */
+  const freshRun = (stageIndex: number) => ({
+    sim: freshSim(stageIndex),
+    issues: checkDesign(toSimGraph(get().nodes, get().edges), get().chapter, stageIndex),
+    runEdited: false,
+    result: null,
+    running: false,
+  })
 
   return {
     ...createInterviewSlice(set, get),
     ...createEstimateSlice(set, get),
-    levelId: 'ch1',
+    ...createLessonSlice(set, get),
+    chapterId: CHAPTERS[0]!.id,
+    view: 'campaign',
+    progress: loadProgress(),
+    playReadyFor: null,
     chapter: chapter1,
     stageIndex: 0,
     best: chapter1.stages.map(() => 0),
@@ -93,6 +129,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
     running: false,
     speed: 1,
     result: null,
+    issues: checkDesign(toSimGraph(startNodes, []), chapter1, 0),
+    runEdited: false,
 
     onNodesChange: (changes) => {
       const nodes = applyNodeChanges(changes, get().nodes)
@@ -178,10 +216,12 @@ export const useGameStore = create<GameStore>()((set, get) => {
       }
       if (interview && peaks) interview = { ...interview, peaks }
       if (!stageFinished(sim)) return set({ sim, interview })
-      const result = stageResult(sim)
+      const result = judgeRun(sim, { issues: get().issues, edited: get().runEdited })
       if (interview) return set({ sim, running: false, result, interview: afterRun(interview, result, sim.graph) })
       const best = get().best.map((b, i) => (i === get().stageIndex ? Math.max(b, result.stars) : b))
       set({ sim, running: false, result, best })
+      // A staged chapter's stars: the rounded-down average over all its stages.
+      get().recordStars(get().chapterId, Math.floor(best.reduce((s, b) => s + b, 0) / best.length))
     },
 
     setRunning: (running) => set({ running }),
@@ -192,16 +232,23 @@ export const useGameStore = create<GameStore>()((set, get) => {
       // in the deep dive it restarts the curveball (the change count is kept).
       if (iv?.phase === 'run') return get().reviseDesign()
       if (iv?.phase === 'deepdive') set({ interview: { ...iv, deepResult: null, peaks: {} } })
-      set({ running: false, result: null, sim: freshSim(get().stageIndex) })
+      set(freshRun(get().stageIndex))
     },
-    goToStage: (index) => set({ stageIndex: index, running: false, result: null, sim: freshSim(index) }),
+    goToStage: (index) => {
+      set({ stageIndex: index })
+      set(freshRun(index))
+    },
 
-    openLevel: (id) => {
-      const entry = LEVELS.find((l) => l.id === id)!
-      // Estimate levels have no board; keep a harmless chapter loaded behind them.
-      const chapter = entry.kind === 'ladder' ? entry.chapter : entry.kind === 'interview' ? entry.level.chapter : chapter1
+    openChapter: (id, view = 'lesson') => {
+      const entry = chapterById(id)
+      if (view === 'lesson') return set({ chapterId: id, view, lesson: freshLesson(), ...(get().playReadyFor !== id ? { playReadyFor: null } : {}) })
+      const play = entry.play
+      // Estimate and review chapters have no board; keep a harmless chapter loaded behind them.
+      const chapter = play.kind === 'ladder' ? play.chapter : play.kind === 'interview' ? play.level.chapter : chapter1
       set({
-        levelId: id,
+        chapterId: id,
+        view,
+        playReadyFor: id,
         chapter,
         stageIndex: 0,
         best: chapter.stages.map(() => 0),
@@ -210,9 +257,33 @@ export const useGameStore = create<GameStore>()((set, get) => {
         sim: initSim(toSimGraph(startNodes, []), chapter, 0),
         running: false,
         result: null,
-        interview: entry.kind === 'interview' ? freshInterview(entry.level) : null,
-        estimate: entry.kind === 'estimate' ? freshEstimate(entry.level) : null,
+        issues: checkDesign(toSimGraph(startNodes, []), chapter, 0),
+        runEdited: false,
+        interview: play.kind === 'interview' ? freshInterview(play.level) : null,
+        estimate: play.kind === 'estimate' ? freshEstimate(play.level) : null,
       })
+    },
+
+    setView: (view) => {
+      const { chapterId, playReadyFor } = get()
+      if (view === 'play' && playReadyFor !== chapterId) return get().openChapter(chapterId, 'play')
+      set({ view, running: view === 'play' ? get().running : false })
+    },
+
+    recordStars: (id, stars) => {
+      const prev = get().progress[id] ?? { stars: 0, learned: false }
+      if (stars <= prev.stars) return
+      const progress = { ...get().progress, [id]: { ...prev, stars } }
+      saveProgress(progress)
+      set({ progress })
+    },
+
+    markLearned: (id) => {
+      const prev = get().progress[id] ?? { stars: 0, learned: false }
+      if (prev.learned) return
+      const progress = { ...get().progress, [id]: { ...prev, learned: true } }
+      saveProgress(progress)
+      set({ progress })
     },
   }
 })

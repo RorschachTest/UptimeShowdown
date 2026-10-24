@@ -111,6 +111,10 @@ export const chapter4: InterviewLevel = {
     id: 'rate-limiter',
     title: 'Design a rate limiter',
     seed: 4,
+    rules: {
+      requires: [{ kind: 'ratelimit', why: 'This API needs a rate limiter: stopping the scrapers is the whole problem.' }],
+      mustPassThrough: [{ types: ['page', 'write', 'scrape'], kind: 'ratelimit', why: 'Every API request must go through the rate limiter.' }],
+    },
     requestTypes: [
       { id: 'page', label: 'Photo request', needs: ['compute', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0, burst: 5 },
       { id: 'write', label: 'Upload', needs: ['compute', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },

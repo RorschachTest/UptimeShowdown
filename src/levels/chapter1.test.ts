@@ -3,6 +3,7 @@ import { stageResult } from '../engine/scoring'
 import { initSim, TICKS_PER_SEC } from '../engine/simulator'
 import { graph, run, type N } from '../engine/test-helpers'
 import { chapter1 } from './chapter1'
+import { blockers, isLegal } from './test-suite'
 
 /** Play a whole stage with a design and score it. */
 function play(stageIndex: number, nodes: N[], wires: string[]) {
@@ -109,3 +110,31 @@ describe('Chapter 1 traps fail the stage', () => {
     expect(r.stars).toBeLessThan(3)
   })
 })
+
+describe('Chapter 1 rules', () => {
+  reference.forEach(([nodes, wires], i) => {
+    it(`stage ${i + 1}'s reference design is legal`, () => {
+      expect(blockers(chapter1, i, nodes, wires)).toEqual([])
+    })
+  })
+
+  it('blocks pieces a stage has not unlocked yet', () => {
+    const g: [N[], string[]] = [[['u', 'traffic'], ['web', 'app'], ['c', 'cache'], ['db', 'sqldb']], ['u>web', 'web>c', 'c>db']]
+    expect(blockers(chapter1, 1, ...g).join(' ')).toMatch(/The Cache isn't available in this stage/)
+  })
+
+  it('blocks settings a stage has not unlocked yet', () => {
+    expect(blockers(chapter1, 1, [['u', 'traffic'], ['web', 'app', 1, { tier: 1 }], ['db', 'sqldb']], ['u>web', 'web>db']).join(' ')).toMatch(
+      /Machine size" isn't unlocked yet/,
+    )
+  })
+
+  it('blocks a piece left off the request path', () => {
+    expect(isLegal(chapter1, 2, [['u', 'traffic'], ['lb', 'lb'], ['web', 'app', 3], ['db', 'sqldb'], ['db2', 'sqldb']], ['u>lb', 'lb>web', 'web>db'])).toBe(false)
+  })
+
+  it('blocks a design that cannot serve every request type', () => {
+    expect(blockers(chapter1, 1, [['u', 'traffic'], ['web', 'app']], ['u>web']).join(' ')).toMatch(/Nothing in your design can serve/)
+  })
+})
+

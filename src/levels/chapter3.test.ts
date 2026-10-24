@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { bottleneckQuestion, changedPieces, interviewReport, reviewDesign, scopeScore } from '../engine/interview'
+import { checkDesign } from '../engine/rules'
 import { stageResult, type StageResult } from '../engine/scoring'
 import { initSim, TICKS_PER_SEC } from '../engine/simulator'
 import { graph, run, type N } from '../engine/test-helpers'
 import { chapter3 } from './chapter3'
+import { blockers, playJudged } from './test-suite'
 
 const ch = chapter3.chapter
 const through = { writeStrategy: 'through' } as const
@@ -66,7 +68,7 @@ describe('interviewer review', () => {
     const s = initSim(graph([['u', 'traffic'], ['web', 'app']], ['u>web']), ch, 0)
     const text = reviewDesign(s, chapter3, ['scale']).map((n) => n.text).join('\n')
     expect(text).toMatch(/single Web Server/)
-    expect(text).toMatch(/Nothing in your design can serve "Feed view"/)
+    expect(checkDesign(s.graph, ch, 0).map((i) => i.text).join('\n')).toMatch(/Nothing in your design can serve "Feed view"/)
     expect(text).toMatch(/question to spare\. You could have asked: "Where are the users\?"/)
   })
 
@@ -131,3 +133,29 @@ describe('scoring the interview', () => {
     expect(interviewReport({ ...base, run: failed }).stars).toBe(0)
   })
 })
+
+describe('Chapter 3 rules', () => {
+  it('the reference designs are legal and the judge agrees with the simulation', () => {
+    expect(blockers(ch, 0, design(6, 0), wires)).toEqual([])
+    expect(playJudged(ch, 0, design(6, 0), wires).stars).toBe(3)
+    expect(blockers(ch, 1, design(11, 1), wires)).toEqual([])
+  })
+
+  it('blocks a CDN placed behind the web servers', () => {
+    const misplaced = ['u>lb', 'lb>web', 'web>cdn', 'web>c', 'c>db']
+    expect(blockers(ch, 0, design(6, 0), misplaced).join(' ')).toMatch(/A CDN belongs at the edge/)
+  })
+
+  it('blocks a cache hanging off the CDN with nothing behind it', () => {
+    const nodes: N[] = [...design(6, 0), ['c2', 'cache']]
+    expect(blockers(ch, 0, nodes, [...wires, 'cdn>c2']).join(' ')).toMatch(/isn't on any request's path/)
+  })
+
+  it('an illegal design earns nothing even if its traffic would be served', () => {
+    const nodes: N[] = [...design(6, 0), ['spare', 'app']]
+    const r = playJudged(ch, 0, nodes, wires)
+    expect(r.stars).toBe(0)
+    expect(r.missed[0]).toMatch(/^Illegal design:/)
+  })
+})
+
