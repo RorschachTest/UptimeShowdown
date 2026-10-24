@@ -37,5 +37,9 @@ export const worker = defineComponent({
     },
   ],
   summary: ({ instances, config }) => `${(instances * 1000 * (config.workSample === 'tenth' ? SAMPLE_SPEEDUP : 1)).toLocaleString('en-US')} jobs/s${config.workSample === 'tenth' ? ' (sampled)' : ''}`,
-  serve: (node, ctx) => serveGeneric(node, { ...ctx, instances: ctx.instances * (node.config.workSample === 'tenth' ? SAMPLE_SPEEDUP : 1) }),
+  serve: (node, ctx) => {
+    // Jobs cost their workCost here (a transcode is heavier than a notification).
+    const chapter = { ...ctx.chapter, requestTypes: ctx.chapter.requestTypes.map((rt) => ({ ...rt, weight: rt.workCost ?? rt.weight })) }
+    return serveGeneric(node, { ...ctx, chapter, instances: ctx.instances * (node.config.workSample === 'tenth' ? SAMPLE_SPEEDUP : 1) })
+  },
 })

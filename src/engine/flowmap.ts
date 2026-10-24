@@ -18,6 +18,7 @@ const DOES: Record<Capability, string> = {
   suggest: 'suggests completions',
   push: 'holds the live connection',
   publish: 'publishes to subscribers',
+  blob: 'stores the bytes',
 }
 
 export interface PieceFlow {

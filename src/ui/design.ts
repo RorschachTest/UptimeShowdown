@@ -5,7 +5,7 @@ import { initSim } from '../engine/simulator'
 import type { Chapter, ComponentKind, DiagramSpec, Graph } from '../engine/types'
 import { useGameStore } from '../store'
 
-const STORES: ComponentKind[] = ['sqldb', 'kvstore', 'cache', 'leaderboard', 'allinone', 'trie', 'tsdb']
+const STORES: ComponentKind[] = ['sqldb', 'kvstore', 'cache', 'leaderboard', 'allinone', 'trie', 'tsdb', 'blob']
 const QUEUES: ComponentKind[] = ['queue', 'frontier', 'pubsub']
 const EXTERNAL: ComponentKind[] = ['provider']
 

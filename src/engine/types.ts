@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub' | 'blob'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push' | 'publish'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push' | 'publish' | 'blob'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -34,6 +34,7 @@ export type TsRetention = 'raw' | 'downsample'
 export type WsReconnect = 'immediate' | 'jitter'
 export type WsAssign = 'random' | 'leastConn'
 export type PubsubHashing = 'mod' | 'ring'
+export type BlobDurability = 'single' | 'replicas' | 'erasure'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -76,6 +77,7 @@ export interface NodeConfig {
   wsReconnect: WsReconnect
   wsAssign: WsAssign
   pubsubHashing: PubsubHashing
+  blobDurability: BlobDurability
 }
 
 export interface SimNode {
@@ -116,6 +118,12 @@ export interface RequestType {
   asyncAfter?: Capability
   /** Followers who should see each of these posts (news-feed fanout). */
   fanout?: number
+  /** Bytes moved per request (MB), for pieces limited by bandwidth (object storage). */
+  sizeMb?: number
+  /** Uploads ('in') need disk space; downloads ('out', the default) only bandwidth. */
+  bytes?: 'in' | 'out'
+  /** Worker jobs are this many units each (e.g. transcoding a video chunk); other pieces use `weight`. */
+  workCost?: number
   /** The endpoint, shown on wires that carry it, e.g. 'GET /{code}'. */
   api?: string
   /** What a piece does for this request at each step, shown on the piece, e.g. { lookup: 'find the long URL' }. */
