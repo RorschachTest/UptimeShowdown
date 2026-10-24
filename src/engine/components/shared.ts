@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -74,6 +74,8 @@ export interface ServeContext {
   fired: SimEvent[]
   /** Events aimed at this node that are in effect now (fired, and within their duration). */
   active: SimEvent[]
+  /** Fed by a queue: work can wait in it instead of being dropped. */
+  buffered: boolean
 }
 
 /** What a component's placement() sees: the kinds wired into and out of it. */
@@ -111,6 +113,8 @@ export interface ComponentDef extends Tradeoff {
   balances: boolean
   /** Users reach only one instance unless a router (balances) sits in front. */
   needsRouter: boolean
+  /** Holds work for the pieces behind it (a queue): they may build a long backlog instead of dropping. */
+  buffers: boolean
   /** Passes on requests it doesn't serve (routers, caches). False for single-purpose services like an ID generator. */
   relays: boolean
   /** Has a machine-size (tier) setting that scales capacity and cost. */
@@ -159,7 +163,7 @@ export const tierSetting: ChoiceSetting<'tier'> = {
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US')
 
-type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'needsRouter' | 'relays' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
+type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'needsRouter' | 'relays' | 'buffers' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
 
 /** Fill in the common defaults so each component file only states what's special about it. */
 export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick<ComponentDef, Defaults>>): ComponentDef {
@@ -171,6 +175,7 @@ export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick
     balances: false,
     needsRouter: false,
     relays: true,
+    buffers: false,
     tiered: false,
     bound: 'compute',
     choices: [],

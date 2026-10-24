@@ -23,6 +23,8 @@ export function emptyStats(): TickStats {
     botStopped: 0,
     violations: {},
     latencyHist: new Array<number>(LATENCY_BUCKETS.length).fill(0),
+    bgDone: 0,
+    bgLatencyHist: new Array<number>(LATENCY_BUCKETS.length).fill(0),
   }
 }
 
@@ -44,6 +46,8 @@ export function addStats(a: TickStats, b: TickStats): TickStats {
     botStopped: a.botStopped + b.botStopped,
     violations: mergeCounts(a.violations, b.violations),
     latencyHist: a.latencyHist.map((v, i) => v + (b.latencyHist[i] ?? 0)),
+    bgDone: a.bgDone + b.bgDone,
+    bgLatencyHist: a.bgLatencyHist.map((v, i) => v + (b.bgLatencyHist[i] ?? 0)),
   }
 }
 
@@ -82,6 +86,8 @@ export interface Metrics {
   botServedRate: number
   /** Correctness violations by id over the window or run. */
   violations: Record<string, number>
+  /** p95 time for background work to finish, ms (0 when there is none). */
+  lagP95Ms: number
 }
 
 export function metricsOf(sum: TickStats, ticks: number): Metrics {
@@ -99,6 +105,7 @@ export function metricsOf(sum: TickStats, ticks: number): Metrics {
     throttledRate: finished > 0 ? sum.throttled / finished : 0,
     botServedRate: sum.botServed + sum.botStopped > 0 ? sum.botServed / (sum.botServed + sum.botStopped) : 0,
     violations: sum.violations,
+    lagP95Ms: percentile(sum.bgLatencyHist, 0.95),
   }
 }
 
@@ -133,6 +140,8 @@ export function stageResult(state: SimState): StageResult {
     missed.push(`${(metrics.staleRate * 100).toFixed(1)}% of answers were stale (users didn't see their own writes)`)
   if (goals.maxThrottledRate !== undefined && metrics.throttledRate > goals.maxThrottledRate)
     missed.push(`${(metrics.throttledRate * 100).toFixed(1)}% of real users' requests were rate-limited`)
+  if (goals.maxLagMs !== undefined && metrics.lagP95Ms > goals.maxLagMs)
+    missed.push(`Background work took ${(metrics.lagP95Ms / 1000).toFixed(1)} s at p95 (limit ${goals.maxLagMs / 1000} s)`)
   for (const [id, max] of Object.entries(goals.maxViolations ?? {})) {
     const n = Math.round(metrics.violations[id] ?? 0)
     if (n > max) missed.push(`${n.toLocaleString('en-US')} ${state.chapter.violationLabels?.[id] ?? id}`)

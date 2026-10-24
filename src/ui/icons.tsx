@@ -66,6 +66,24 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 20V13h4v7M10 20V8h4v12M16 20v-9h4v9M3 20h18" />
     </>
   ),
+  queue: (
+    <>
+      <rect x="3" y="7" width="4" height="10" rx="1" />
+      <rect x="10" y="7" width="4" height="10" rx="1" />
+      <path d="M17 12h4m-2-2 2 2-2 2" />
+    </>
+  ),
+  worker: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+    </>
+  ),
+  provider: (
+    <>
+      <path d="M4 12l16-7-5 16-3-7-8-2Z" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

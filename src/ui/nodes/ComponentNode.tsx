@@ -39,7 +39,7 @@ export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
   const loadPct = Math.round((stats?.load ?? 0) * 100)
   // Instances count the piece itself; replicas are extra copies.
   const copies = Math.min(count?.field === 'instances' ? value - 1 : value, MAX_STACKED_COPIES)
-  const showQueue = def.queueTicks > 0 && (stats?.queued ?? 0) >= 1
+  const showQueue = (stats?.queued ?? 0) >= 1
 
   return (
     <div className={`relative w-52 ${countOpen ? 'nowheel' : ''}`} onWheel={onWheel} title={countOpen ? count!.scrollHint : 'Click for settings'}>

@@ -102,6 +102,13 @@ export function HUD() {
             tone={started && stage.goals.maxBotServedRate !== undefined ? (metrics.botServedRate <= stage.goals.maxBotServedRate ? 'ok' : 'bad') : undefined}
           />
         )}
+        {stage.goals.maxLagMs !== undefined && (
+          <Stat
+            label="Delivery lag p95"
+            value={started && metrics.lagP95Ms > 0 ? fmtMs(metrics.lagP95Ms) : '–'}
+            tone={started && metrics.lagP95Ms > 0 ? (metrics.lagP95Ms <= stage.goals.maxLagMs ? 'ok' : 'bad') : undefined}
+          />
+        )}
         {showStale && (
           <Stat
             label="Stale reads"

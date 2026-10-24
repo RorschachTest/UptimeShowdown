@@ -40,6 +40,7 @@ interface Topology {
   order: string[]
   outEdges: Record<string, SimEdge[]>
   lbFed: Record<string, boolean>
+  buffered: Record<string, boolean>
   reach: Record<string, boolean[][]>
 }
 
@@ -49,6 +50,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
   const indegree: Record<string, number> = {}
   const outEdges: Record<string, SimEdge[]> = {}
   const lbFed: Record<string, boolean> = {}
+  const buffered: Record<string, boolean> = {}
   for (const n of graph.nodes) {
     indegree[n.id] = 0
     outEdges[n.id] = []
@@ -59,6 +61,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
     outEdges[e.source]!.push(e)
     indegree[e.target]! += 1
     if (COMPONENTS[src.kind].balances) lbFed[e.target] = true
+    if (COMPONENTS[src.kind].buffers) buffered[e.target] = true
   }
   const ready = graph.nodes.filter((n) => indegree[n.id] === 0).map((n) => n.id)
   const order: string[] = []
@@ -87,7 +90,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
       }),
     )
   }
-  return { order, outEdges, lbFed, reach }
+  return { order, outEdges, lbFed, buffered, reach }
 }
 
 export function initSim(graph: Graph, chapter: Chapter, stageIndex: number): SimState {
@@ -151,9 +154,15 @@ export function step(state: SimState): SimState {
     if (live) (active[target] ??= []).push(ev)
   }
 
+  // Async types answer the user at their `asyncAfter` step; later steps are background work.
+  const ackStep = types.map((rt) => (rt.asyncAfter ? rt.needs.indexOf(rt.asyncAfter) + 1 : Infinity))
+  const isBg = (t: number, stepIdx: number) => stepIdx >= (ackStep[t] ?? Infinity)
+
   // Abusive traffic never counts toward uptime: a lost scraper request is a bot stopped.
-  const fail = (t: number, count: number) => {
+  // Lost background work never reaches the user either: it's a lost message.
+  const fail = (t: number, count: number, bg = false) => {
     if (types[t]?.abusive) stats.botStopped += count
+    else if (bg) stats.violations.lostMessages = (stats.violations.lostMessages ?? 0) + count
     else stats.errors += count
   }
 
@@ -173,8 +182,9 @@ export function step(state: SimState): SimState {
       if (edgeServing.length > 0) valid = edgeServing
       else if (nonEdge.length > 0) valid = nonEdge
       if (valid.length === 0) {
-        if (!types[t]!.abusive) stats.deadEnds += count
-        fail(t, count)
+        const bg = isBg(t, stepIdx)
+        if (!types[t]!.abusive && !bg) stats.deadEnds += count
+        fail(t, count, bg)
         return
       }
       const share = count / valid.length
@@ -185,18 +195,29 @@ export function step(state: SimState): SimState {
         byType[t] = (byType[t] ?? 0) + share * TICKS_PER_SEC
       }
     }
-    const finishOrRoute = (t: number, stepIdx: number, count: number, latencyMs: number) => {
+    const answer = (t: number, count: number, latencyMs: number) => {
+      const total = latencyMs + (node.kind === 'cdn' ? 0 : types[t]!.distanceMs)
+      stats.success += count
+      const b = bucketIndex(total)
+      stats.latencyHist[b] = (stats.latencyHist[b] ?? 0) + count
+    }
+    const finishOrRoute = (t: number, from: number, stepIdx: number, count: number, latencyMs: number) => {
       const rt = types[t]!
-      if (stepIdx < rt.needs.length) return route(t, stepIdx, count, latencyMs)
       if (count <= EPSILON) return
+      // Crossing the async boundary answers the user; the rest carries on in the background.
+      if (!rt.abusive && from < (ackStep[t] ?? Infinity) && stepIdx >= (ackStep[t] ?? Infinity)) answer(t, count, latencyMs)
+      if (stepIdx < rt.needs.length) return route(t, stepIdx, count, latencyMs)
       if (rt.abusive) {
         stats.botServed += count
         return
       }
-      const total = latencyMs + (node.kind === 'cdn' ? 0 : rt.distanceMs)
-      stats.success += count
-      const b = bucketIndex(total)
-      stats.latencyHist[b] = (stats.latencyHist[b] ?? 0) + count
+      if (rt.asyncAfter) {
+        stats.bgDone += count
+        const b = bucketIndex(latencyMs)
+        stats.bgLatencyHist[b] = (stats.bgLatencyHist[b] ?? 0) + count
+        return
+      }
+      answer(t, count, latencyMs)
     }
 
     if (node.kind === 'traffic') {
@@ -216,7 +237,8 @@ export function step(state: SimState): SimState {
     if (instances <= 0) {
       let lost = 0
       for (const [k, p] of [...Object.entries(inflow), ...Object.entries(backlog)]) {
-        fail(parseKey(k)[0], p.count)
+        const [t, s] = parseKey(k)
+        fail(t, p.count, isBg(t, s))
         lost += p.count
       }
       nodeStats[id] = { load: 0, processedRps: 0, droppedRps: lost * TICKS_PER_SEC, queued: 0, latencyMs: 0, down: true, staticShare: 0 }
@@ -224,13 +246,37 @@ export function step(state: SimState): SimState {
     }
 
     const prevState = state.runtime[id]?.state
-    const ctx: ServeContext = { instances, inflow, backlog, chapter, stage, seconds, state: prevState, fired: fired[id] ?? [], active: active[id] ?? [] }
+    const ctx: ServeContext = {
+      instances,
+      inflow,
+      backlog,
+      chapter,
+      stage,
+      seconds,
+      state: prevState,
+      fired: fired[id] ?? [],
+      active: active[id] ?? [],
+      buffered: !!state.buffered[id],
+    }
     const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx)
-    for (const [t, n] of Object.entries(res.dropped)) fail(Number(t), n)
+    // Drops are reported per type; split them between user-facing and background flows by what arrived.
+    const bgShare: Record<number, [number, number]> = {}
+    for (const [k, p] of [...Object.entries(inflow), ...Object.entries(backlog)]) {
+      const [t, s] = parseKey(k)
+      const share = (bgShare[t] ??= [0, 0])
+      share[isBg(t, s) ? 0 : 1] += p.count
+    }
+    const failSplit = (t: number, n: number) => {
+      const [bg, fg] = bgShare[t] ?? [0, 1]
+      const f = bg + fg > 0 ? bg / (bg + fg) : 0
+      if (f > 0) fail(t, n * f, true)
+      if (f < 1) fail(t, n * (1 - f))
+    }
+    for (const [t, n] of Object.entries(res.dropped)) failSplit(Number(t), n)
     // Rejections are deliberate: scrapers stopped is good, real users throttled is a violation.
     for (const [t, n] of Object.entries(res.rejected ?? {})) {
       if (!types[Number(t)]?.abusive) stats.throttled += n
-      fail(Number(t), n)
+      failSplit(Number(t), n)
     }
     stats.stale += res.stale
     for (const [k, v] of Object.entries(res.violations ?? {})) stats.violations[k] = (stats.violations[k] ?? 0) + v
@@ -251,10 +297,10 @@ export function step(state: SimState): SimState {
         const hits = p.count * h
         // Cache-aside can hand back a value from before the user's own write.
         if (node.kind === 'cache' && rt.consistency === 'ryw' && node.config.writeStrategy === 'aside') stats.stale += hits
-        finishOrRoute(t, stepIdx + 1, hits, latencyMs)
+        finishOrRoute(t, stepIdx, stepIdx + 1, hits, latencyMs)
         route(t, stepIdx, p.count - hits, latencyMs)
       } else {
-        finishOrRoute(t, advance(node.kind, rt.needs, stepIdx), p.count, latencyMs)
+        finishOrRoute(t, stepIdx, advance(node.kind, rt.needs, stepIdx), p.count, latencyMs)
       }
     }
 
