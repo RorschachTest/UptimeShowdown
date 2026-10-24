@@ -17,6 +17,7 @@ import { v1ch14 } from './vol1/ch14'
 import { v1ch15 } from './vol1/ch15'
 import { v2ch01 } from './vol2/ch01'
 import { v2ch02 } from './vol2/ch02'
+import { v2ch03 } from './vol2/ch03'
 import { v2ch05 } from './vol2/ch05'
 import { v2ch08 } from './vol2/ch08'
 import { v2ch10 } from './vol2/ch10'
@@ -24,7 +25,7 @@ import { v2ch10 } from './vol2/ch10'
 export type { ChapterEntry, ChapterPlay } from './types'
 
 /** The whole campaign, in book order. Adding a chapter = one file in vol1/ or vol2/ plus one line here. */
-export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04, v1ch05, v1ch06, v1ch07, v1ch08, v1ch09, v1ch10, v1ch11, v1ch12, v1ch13, v1ch14, v1ch15, v2ch01, v2ch02, v2ch05, v2ch08, v2ch10]
+export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04, v1ch05, v1ch06, v1ch07, v1ch08, v1ch09, v1ch10, v1ch11, v1ch12, v1ch13, v1ch14, v1ch15, v2ch01, v2ch02, v2ch03, v2ch05, v2ch08, v2ch10]
 
 /** The simulated chapter behind a chapter's Play step, if it has a board. */
 export function boardChapter(entry: ChapterEntry): Chapter | undefined {
