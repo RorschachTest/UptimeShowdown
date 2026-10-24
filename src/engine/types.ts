@@ -435,7 +435,7 @@ export type Hue = 'blue' | 'orange' | 'purple' | 'teal' | 'green' | 'red' | 'yel
 /** Lesson pictures. Static kinds are plain data; lab kinds are small interactive explainers. */
 export type LessonVisual =
   /** A number split into fields, e.g. a 64-bit ID. */
-  | { kind: 'bits'; caption: string; fields: { label: string; bits: number; hue: Hue; note: string }[] }
+  | { kind: 'bits'; caption: string; fields: { label: string; bits: number; hue: Hue; note: string }[]; unit?: string }
   /** Horizontal bars comparing a few values. */
   | { kind: 'bars'; caption: string; unit: string; rows: { label: string; value: number; hue: Hue; note?: string }[] }
   /** A coloured left-to-right flow of steps. */

@@ -42,7 +42,8 @@ function Bits({ v }: { v: Extract<LessonVisual, { kind: 'bits' }> }) {
         {v.fields.map((f) => (
           <li key={f.label} className="rounded-lg px-3 py-2 text-sm" style={{ background: tint(f.hue) }}>
             <span className="font-bold" style={{ color: HUE[f.hue] }}>
-              {f.label} · {f.bits} bit{f.bits > 1 ? 's' : ''}
+              {f.label} · {f.bits} {v.unit ?? 'bit'}
+              {f.bits > 1 ? 's' : ''}
             </span>
             <span className="block text-ink">{f.note}</span>
           </li>
