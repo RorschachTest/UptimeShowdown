@@ -1,3 +1,5 @@
+import { parseKey } from '../flows'
+import { serveGeneric } from '../serve'
 import { defineComponent, tierSetting } from './shared'
 
 export const app = defineComponent({
@@ -13,7 +15,26 @@ export const app = defineComponent({
   serves: ['compute', 'static'],
   relays: false,
   tiered: true,
-  choices: [tierSetting],
+  choices: [
+    tierSetting,
+    {
+      field: 'appIdempotent',
+      label: 'Idempotency key',
+      gate: 'idempotency',
+      options: [
+        { value: false, label: 'None', solves: 'Nothing to store.', worsens: 'A double click or a retry after a timeout creates a second reservation.' },
+        { value: true, label: 'Per request', solves: 'The client sends a unique key; a repeat with the same key returns the first result.', worsens: 'Keys must be stored and checked.' },
+      ],
+    },
+  ],
+  serve: (node, ctx) => {
+    const res = serveGeneric(node, ctx)
+    if (node.config.appIdempotent) return res
+    // Requests the client sent twice go through twice.
+    let repeated = 0
+    for (const [k, p] of Object.entries(res.served)) repeated += p.count * (ctx.chapter.requestTypes[parseKey(k)[0]]!.resubmits ?? 0)
+    return repeated > 0 ? { ...res, violations: { duplicateBookings: repeated } } : res
+  },
   needsRouter: true,
   count: {
     field: 'instances',

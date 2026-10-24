@@ -39,6 +39,7 @@ export type BrokerAcks = 'none' | 'leader' | 'all'
 export type BrokerCommit = 'before' | 'after'
 export type AggLate = 'drop' | 'watermark'
 export type AggKeys = 'byAd' | 'split'
+export type DbConcurrency = 'none' | 'pessimistic' | 'optimistic'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -90,6 +91,8 @@ export interface NodeConfig {
   aggLate: AggLate
   aggDedupe: boolean
   aggKeys: AggKeys
+  dbConcurrency: DbConcurrency
+  appIdempotent: boolean
 }
 
 export interface SimNode {
@@ -126,6 +129,8 @@ export interface RequestType {
   burst?: number
   /** Share of these writes that race another write to the same key (two devices, two tabs). */
   conflicts?: number
+  /** Share of these requests sent twice by the client (double clicks, retries after a timeout). */
+  resubmits?: number
   /** The user is answered once this step is done; later steps run in the background (lag, not latency; losses are violations). */
   asyncAfter?: Capability
   /** Followers who should see each of these posts (news-feed fanout). */
@@ -162,7 +167,7 @@ export interface SimEvent {
 /** Kept for older level data; every event is a SimEvent. */
 export type CrashEvent = SimEvent
 
-export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting' | 'cacheNodes' | 'hashing' | 'sampling'
+export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting' | 'cacheNodes' | 'hashing' | 'sampling' | 'booking' | 'idempotency'
 
 export interface Stage {
   id: string
