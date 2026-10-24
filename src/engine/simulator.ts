@@ -82,6 +82,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
     reach[id] = chapter.requestTypes.map((rt, t) =>
       rt.needs.map((need, step) => {
         if (spec.partial && serves(node.kind, need)) return childCan(id, t, step + 1) && childCan(id, t, step)
+        if (!spec.relays && !serves(node.kind, need)) return false
         return childCan(id, t, advance(node.kind, rt.needs, step))
       }),
     )

@@ -25,6 +25,7 @@ export const idgen = defineComponent({
   baseLatencyMs: 1,
   costPerMin: 10,
   serves: ['id'],
+  relays: false,
   count: {
     field: 'instances',
     label: 'Servers',
