@@ -119,6 +119,11 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M7.5 15l2.5-3 2 2 3.5-4.5" />
     </>
   ),
+  wsgateway: (
+    <>
+      <path d="M4 8h12l-3-3M20 16H8l3 3" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

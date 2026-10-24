@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -31,6 +31,8 @@ export type TrieBuild = 'live' | 'weekly'
 export type WorkSample = 'all' | 'tenth'
 export type TsEngine = 'rows' | 'timeseries'
 export type TsRetention = 'raw' | 'downsample'
+export type WsReconnect = 'immediate' | 'jitter'
+export type WsAssign = 'random' | 'leastConn'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -70,6 +72,8 @@ export interface NodeConfig {
   workSample: WorkSample
   tsEngine: TsEngine
   tsRetention: TsRetention
+  wsReconnect: WsReconnect
+  wsAssign: WsAssign
 }
 
 export interface SimNode {
@@ -151,6 +155,8 @@ export interface Stage {
   /** What this stage newly unlocks (cumulative with earlier stages). */
   unlocks: { kinds: ComponentKind[]; settings: SettingId[] }
   events: SimEvent[]
+  /** Users holding a live connection (WebSocket) at once; connection servers are sized by this. */
+  connections?: number
   /** Size of the data a cache must hold to answer reads (GB). Unset: cache hit rate comes from its memory size alone. */
   workingSetGb?: number
   /** Max spend per minute for ★★. */

@@ -19,6 +19,7 @@ import { sqldb } from './sqldb'
 import { trie } from './trie'
 import { tsdb } from './tsdb'
 import { worker } from './worker'
+import { wsgateway } from './wsgateway'
 
 export * from './shared'
 
@@ -36,7 +37,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -75,6 +76,8 @@ export const DEFAULT_CONFIG: NodeConfig = {
   workSample: 'all',
   tsEngine: 'rows',
   tsRetention: 'raw',
+  wsReconnect: 'immediate',
+  wsAssign: 'random',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
