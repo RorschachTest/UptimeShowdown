@@ -93,6 +93,8 @@ export const DEFAULT_CONFIG: NodeConfig = {
   aggLate: 'drop',
   aggDedupe: false,
   aggKeys: 'byAd',
+  dbConcurrency: 'none',
+  appIdempotent: false,
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {

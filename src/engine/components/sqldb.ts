@@ -5,6 +5,11 @@ import { defineComponent, fmtInt, TIER_CAPACITY, TIER_COST, tierSetting, type Ch
 const READ_RPS = 1000
 const WRITE_RPS = 200
 const REPLICA_COST = 30
+/** Row locks hold writes in line: each costs about twice as much throughput, plus waiting. */
+const LOCK_COST = 2
+const LOCK_WAIT_MS = 20
+/** Each lost race is retried: extra work grows with how often writes collide. */
+const RETRY_COST = 3
 
 const readRouting: ChoiceSetting<'readRouting'> = {
   field: 'readRouting',
@@ -36,7 +41,20 @@ export const sqldb = defineComponent({
   serves: ['lookup', 'write'],
   tiered: true,
   bound: 'storage',
-  choices: [tierSetting, readRouting],
+  choices: [
+    tierSetting,
+    readRouting,
+    {
+      field: 'dbConcurrency',
+      label: 'Racing writes',
+      gate: 'booking',
+      options: [
+        { value: 'none', label: 'No control', solves: 'No extra work.', worsens: 'Two people can both take the last room: double bookings.' },
+        { value: 'pessimistic', label: 'Lock rows', solves: 'SELECT … FOR UPDATE: the second booking waits for the first.', worsens: 'Locked rows halve write throughput and add waiting.' },
+        { value: 'optimistic', label: 'Version check', solves: 'Update only if the version is unchanged (or a constraint holds); the loser retries.', worsens: 'Under heavy contention, retries pile up.' },
+      ],
+    },
+  ],
   count: {
     field: 'replicas',
     label: 'Read replicas',
@@ -81,7 +99,11 @@ export const sqldb = defineComponent({
       return { k, t, p, share }
     })
 
-    const primaryUtil = primaryReads / readCap + writes / writeCap
+    // Concurrency control turns racing writes into extra work instead of double bookings.
+    const conflicts = Math.max(0, ...chapter.requestTypes.map((rt) => rt.conflicts ?? 0))
+    const cc = node.config.dbConcurrency
+    const writeWork = cc === 'pessimistic' ? LOCK_COST : cc === 'optimistic' ? 1 + RETRY_COST * conflicts : 1
+    const primaryUtil = primaryReads / readCap + (writes * writeWork) / writeCap
     const replicaUtil = replicas > 0 ? replicaReads / (readCap * replicas) : 0
     const sp = primaryUtil > 1.2 ? 1.2 / primaryUtil : 1
     const sr = replicaUtil > 1.2 ? 1.2 / replicaUtil : 1
@@ -97,6 +119,17 @@ export const sqldb = defineComponent({
       if (chapter.requestTypes[t]!.consistency === 'ryw') stale += p.count * share * sr
     }
     const load = Math.max(primaryUtil, replicaUtil)
-    return { served, queue: {}, dropped, load, latencyMs: 10 * (1 + Math.min(load, 2) ** 4), stale }
+    // Without control, racing bookings for the same last room both succeed.
+    let doubled = 0
+    if (cc === 'none') for (const { k, t } of entries) if (chapter.requestTypes[t]!.needs[parseKey(k)[1]] === 'write') doubled += (served[k]?.count ?? 0) * (chapter.requestTypes[t]!.conflicts ?? 0)
+    return {
+      served,
+      queue: {},
+      dropped,
+      load,
+      latencyMs: 10 * (1 + Math.min(load, 2) ** 4) + (cc === 'pessimistic' ? LOCK_WAIT_MS : 0),
+      stale,
+      violations: doubled > 0 ? { doubleBooked: doubled } : undefined,
+    }
   },
 })
