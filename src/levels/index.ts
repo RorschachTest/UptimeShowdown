@@ -1,3 +1,4 @@
+import type { Chapter } from '../engine/types'
 import type { ChapterEntry } from './types'
 import { v1ch01 } from './vol1/ch01'
 import { v1ch02 } from './vol1/ch02'
@@ -17,6 +18,13 @@ export type { ChapterEntry, ChapterPlay } from './types'
 
 /** The whole campaign, in book order. Adding a chapter = one file in vol1/ or vol2/ plus one line here. */
 export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04, v1ch05, v1ch06, v1ch07, v1ch08, v1ch09, v1ch10, v1ch11, v2ch01, v2ch10]
+
+/** The simulated chapter behind a chapter's Play step, if it has a board. */
+export function boardChapter(entry: ChapterEntry): Chapter | undefined {
+  if (entry.play.kind === 'ladder') return entry.play.chapter
+  if (entry.play.kind === 'interview') return entry.play.level.chapter
+  return undefined
+}
 
 export function chapterById(id: string): ChapterEntry {
   const c = CHAPTERS.find((x) => x.id === id)

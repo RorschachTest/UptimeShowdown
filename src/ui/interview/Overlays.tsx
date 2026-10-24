@@ -1,9 +1,11 @@
 import { useGameStore } from '../../store'
+import { designSpec } from '../design'
+import { MiniDiagram } from '../lesson/MiniDiagram'
 
-function Card({ title, children, label }: { title: string; label: string; children: React.ReactNode }) {
+function Card({ title, children, label, wide }: { title: string; label: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="absolute inset-0 z-10 flex items-start justify-center overflow-y-auto bg-ink/25 p-6" role="dialog" aria-modal="true" aria-label={label}>
-      <div className="piece w-full max-w-xl px-5 py-4">
+      <div className={`piece w-full ${wide ? 'max-w-4xl' : 'max-w-xl'} px-5 py-4`}>
         <h2 className="text-xl font-bold">{title}</h2>
         {children}
       </div>
@@ -27,7 +29,9 @@ function Review() {
           <ul className="mt-1 flex flex-col gap-1 text-sm">
             {issues.map((i) => (
               <li key={i.text} className="flex gap-2">
-                <span className="text-bad" aria-hidden="true">✗</span>
+                <span className="text-bad" aria-hidden="true">
+                  ✗
+                </span>
                 <span>{i.text}</span>
               </li>
             ))}
@@ -102,9 +106,12 @@ function WrapUp() {
 function ReportCard() {
   const report = useGameStore((s) => s.interview!.report!)
   const chapterId = useGameStore((s) => s.chapterId)
+  const graph = useGameStore((s) => s.sim.graph)
+  const chapter = useGameStore((s) => s.chapter)
+  const stageIndex = useGameStore((s) => s.stageIndex)
   const { openChapter, setView } = useGameStore.getState()
   return (
-    <Card title="Report card" label="Report card">
+    <Card title="Report card" label="Report card" wide>
       <p className="mt-1 text-3xl tracking-wider text-warn" aria-label={`${report.stars} of 3 stars`}>
         {'★'.repeat(report.stars)}
         <span className="text-ink-faint">{'★'.repeat(3 - report.stars)}</span>
@@ -120,6 +127,10 @@ function ReportCard() {
           </li>
         ))}
       </ul>
+      <h3 className="mt-4 text-sm font-bold">Your final design</h3>
+      <div className="mt-1.5">
+        <MiniDiagram spec={designSpec(graph, chapter, stageIndex)} tall />
+      </div>
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={() => setView('campaign')} className={btn}>
           All chapters

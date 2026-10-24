@@ -6,6 +6,7 @@ import type { GameNode } from '../graph'
 import { ComponentIcon } from '../icons'
 import { useFactVisible } from '../interview/facts'
 import { TYPE_COLORS } from '../settings'
+import { pieceName } from '../../engine/flowmap'
 
 /** Where the stage's users come from. Set by the stage; the player can only wire it up. */
 export function TrafficNode({ id }: NodeProps<GameNode>) {
@@ -23,7 +24,7 @@ export function TrafficNode({ id }: NodeProps<GameNode>) {
       <div className="piece bg-ink px-3 pt-2.5 pb-3 text-piece">
         <div className="flex items-center gap-2">
           <ComponentIcon kind="traffic" />
-          <span className="text-[15px] leading-tight font-semibold">Users</span>
+          <span className="text-[15px] leading-tight font-semibold">{pieceName({ kind: 'traffic' }, undefined, sim.chapter)}</span>
         </div>
         <p className="mt-1 text-2xl leading-none font-bold">
           {showScale ? fmtInt(rps) : '?'} <span className="text-sm font-medium opacity-70">rps</span>
@@ -31,7 +32,13 @@ export function TrafficNode({ id }: NodeProps<GameNode>) {
 
         <div className="mt-2.5 flex h-2 overflow-hidden rounded-full" aria-hidden="true">
           {types.map((rt) => (
-            <div key={rt.id} style={{ width: `${showMix ? (stage.mix[rt.id] ?? 0) * 100 : 100 / types.length}%`, background: showMix ? TYPE_COLORS[rt.id] : 'var(--color-ink-soft)' }} />
+            <div
+              key={rt.id}
+              style={{
+                width: `${showMix ? (stage.mix[rt.id] ?? 0) * 100 : 100 / types.length}%`,
+                background: showMix ? TYPE_COLORS[rt.id] : 'var(--color-ink-soft)',
+              }}
+            />
           ))}
         </div>
         <ul className="mt-1.5 grid grid-cols-2 gap-x-2 text-xs opacity-85">

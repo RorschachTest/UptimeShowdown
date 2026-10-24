@@ -98,7 +98,9 @@ export const chapter9: InterviewLevel = {
         { kind: 'downloader', why: 'Something has to download the pages.' },
       ],
     },
-    requestTypes: [{ id: 'write', label: 'URL to crawl', needs: ['enqueue', 'work'], weight: 1, consistency: 'any', distanceMs: 0, asyncAfter: 'enqueue' }],
+    names: [{ kind: 'traffic', name: 'Scheduler' }],
+    data: { frontier: ['one queue per host'], downloader: ['pages → content store'] },
+    requestTypes: [{ id: 'write', label: 'URL to crawl', api: 'crawl(url)', does: { enqueue: 'queue by host, then priority', work: 'fetch, parse, store' }, needs: ['enqueue', 'work'], weight: 1, consistency: 'any', distanceMs: 0, asyncAfter: 'enqueue' }],
     stages: [main, curveball],
   },
 }

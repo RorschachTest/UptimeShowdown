@@ -67,6 +67,9 @@ export interface GameStore extends InterviewSlice, EstimateSlice, LessonSlice {
   advance: (ticks: number) => void
   setRunning: (running: boolean) => void
   setSpeed: (speed: Speed) => void
+  /** Design view: the board as an architecture diagram (names, steps, endpoints), live gauges hidden. */
+  designView: boolean
+  setDesignView: (on: boolean) => void
   /** Restart the current stage with the current design. */
   reset: () => void
   goToStage: (index: number) => void
@@ -128,6 +131,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
     sim: initSim(toSimGraph(startNodes, []), chapter1, 0),
     running: false,
     speed: 1,
+    designView: false,
     result: null,
     issues: checkDesign(toSimGraph(startNodes, []), chapter1, 0),
     runEdited: false,
@@ -226,6 +230,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     setRunning: (running) => set({ running }),
     setSpeed: (speed) => set({ speed }),
+    setDesignView: (designView) => set({ designView }),
     reset: () => {
       const iv = get().interview
       // In an interview, resetting the main run means going back to revise the design;

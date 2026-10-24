@@ -101,9 +101,11 @@ export const chapter8: InterviewLevel = {
         { types: ['page'], kind: 'cache', why: 'Redirects are read 19 times for every write: they must check a cache before the database.' },
       ],
     },
+    names: [{ kind: 'lb', name: 'API gateway' }, { kind: 'app', name: 'Read service', when: ['page'] }, { kind: 'app', name: 'Write service', when: ['write'] }, { kind: 'app', name: 'API service' }, { kind: 'cache', name: 'URL cache' }, { kind: 'sqldb', name: 'URLs DB' }],
+    data: { sqldb: ['urls: code, long_url, created_at'], cache: ['code → long URL'] },
     requestTypes: [
-      { id: 'page', label: 'Redirect', needs: ['compute', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
-      { id: 'write', label: 'New short link', needs: ['compute', 'id', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'page', label: 'Redirect', api: 'GET /{code}', does: { compute: 'parse the code, 302', lookup: 'find the long URL' }, needs: ['compute', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'write', label: 'New short link', api: 'POST /urls', does: { compute: 'check the URL', id: 'next unique ID → base62', write: 'save code → URL' }, needs: ['compute', 'id', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
     ],
     stages: [main, curveball],
   },

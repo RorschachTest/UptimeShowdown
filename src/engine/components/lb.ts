@@ -10,6 +10,7 @@ export const lb = defineComponent({
   capacityRps: 100_000,
   baseLatencyMs: 2,
   costPerMin: 15,
+  does: 'spreads requests across servers',
   serves: [],
   bound: 'network',
   balances: true,

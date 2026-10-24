@@ -98,6 +98,10 @@ export interface RequestType {
   asyncAfter?: Capability
   /** Followers who should see each of these posts (news-feed fanout). */
   fanout?: number
+  /** The endpoint, shown on wires that carry it, e.g. 'GET /{code}'. */
+  api?: string
+  /** What a piece does for this request at each step, shown on the piece, e.g. { lookup: 'find the long URL' }. */
+  does?: Partial<Record<Capability, string>>
 }
 
 export interface TrafficPoint {
@@ -175,6 +179,10 @@ export interface Chapter {
   rules?: LevelRules
   /** Human names for violation ids this chapter scores, e.g. { duplicateId: 'duplicate IDs' }. */
   violationLabels?: Record<string, string>
+  /** Names for pieces by the job they end up doing: the first match wins. `when` = it handles only these request types. */
+  names?: { kind: ComponentKind; name: string; when?: string[] }[]
+  /** What each kind of store holds in this chapter, shown under it (e.g. 'urls: code → long URL'). */
+  data?: Partial<Record<ComponentKind, string[]>>
 }
 
 /** A batch of requests of one type at one step of its needs, with their average latency so far. */
@@ -379,10 +387,16 @@ export interface LessonCard {
   /** What the idea or component buys you, and what it costs. */
   solves?: string
   worsens?: string
-  /** A small read-only diagram: pieces and 'a>b' wires, laid out left to right. */
-  diagram?: { nodes: [id: string, kind: ComponentKind][]; wires: string[] }
+  /** A small read-only diagram: pieces and 'a>b' wires (optionally 'a>b|label'), laid out left to right. */
+  diagram?: DiagramSpec
   /** A picture or a small hands-on lab that explains the idea. */
   visual?: LessonVisual
+}
+
+/** A design drawn read-only: pieces with optional name, step lines and data notes; wires 'a>b' or 'a>b|label'. */
+export interface DiagramSpec {
+  nodes: [id: string, kind: ComponentKind, info?: { name?: string; does?: string[]; data?: string[] }][]
+  wires: string[]
 }
 
 /** Palette names for lesson pictures (mapped to theme colours by the UI). */

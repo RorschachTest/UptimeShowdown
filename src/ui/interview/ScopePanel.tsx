@@ -36,7 +36,7 @@ export function ScopePanel() {
                 ))}
               </ul>
             </div>
-            {iv.level.brief.diagram && <MiniDiagram spec={iv.level.brief.diagram} />}
+            {iv.level.brief.diagram && <MiniDiagram spec={iv.level.brief.diagram} chapter={iv.level.chapter} />}
           </section>
         )}
 

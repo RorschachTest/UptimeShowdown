@@ -15,6 +15,23 @@ const BOUND_LABEL: Record<Bottleneck, string> = {
   network: 'Network-bound',
 }
 
+/** Switch between the live board and a clean architecture view of the same design. */
+function DesignToggle() {
+  const on = useGameStore((s) => s.designView)
+  const setDesignView = useGameStore((s) => s.setDesignView)
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => setDesignView(!on)}
+      title="Show the board as a design diagram: what each piece does and which API each wire carries"
+      className={`rounded-lg border-2 border-ink px-3 py-1 text-sm font-semibold ${on ? 'bg-ink text-piece' : 'bg-piece hover:bg-board'}`}
+    >
+      Design view
+    </button>
+  )
+}
+
 function Stat({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'bad' }) {
   const color = tone === 'ok' ? 'text-ok' : tone === 'bad' ? 'text-bad' : 'text-ink'
   return (
@@ -174,6 +191,7 @@ export function HUD() {
             </button>
           ))}
         </div>
+        <DesignToggle />
         <button
           type="button"
           onClick={reset}

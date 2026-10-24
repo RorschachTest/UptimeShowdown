@@ -5,11 +5,13 @@ export const chapter1: Chapter = {
   id: 'scale-from-zero',
   title: 'Scale from zero to millions',
   seed: 1,
+  names: [{ kind: 'allinone', name: 'Web + DB box' }, { kind: 'app', name: 'Web app' }, { kind: 'sqldb', name: 'Posts DB' }, { kind: 'cache', name: 'Post cache' }],
+  data: { sqldb: ['users, posts'], cache: ['post id → post'], cdn: ['images, CSS, JS'], allinone: ['users, posts'] },
   requestTypes: [
-    { id: 'page', label: 'Page view', needs: ['compute', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
-    { id: 'write', label: 'New post', needs: ['compute', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
-    { id: 'ryw', label: 'Own post', needs: ['compute', 'lookup'], weight: 1, consistency: 'ryw', distanceMs: 0 },
-    { id: 'static', label: 'Images & JS', needs: ['static'], weight: 2, consistency: 'any', distanceMs: 250 },
+    { id: 'page', label: 'Page view', api: 'GET /posts/{id}', does: { compute: 'render the page', lookup: 'read posts' }, needs: ['compute', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
+    { id: 'write', label: 'New post', api: 'POST /posts', does: { compute: 'check the post', write: 'save the post' }, needs: ['compute', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
+    { id: 'ryw', label: 'Own post', api: 'GET /me/posts', does: { compute: 'render your posts', lookup: 'read your posts' }, needs: ['compute', 'lookup'], weight: 1, consistency: 'ryw', distanceMs: 0 },
+    { id: 'static', label: 'Images & JS', api: 'GET /static/*', does: { static: 'serve images and JS' }, needs: ['static'], weight: 2, consistency: 'any', distanceMs: 250 },
   ],
   stages: [
     {
