@@ -6,7 +6,7 @@ import type { Chapter, ComponentKind, DiagramSpec, Graph } from '../engine/types
 import { useGameStore } from '../store'
 
 const STORES: ComponentKind[] = ['sqldb', 'kvstore', 'cache', 'leaderboard', 'allinone', 'trie', 'tsdb', 'blob']
-const QUEUES: ComponentKind[] = ['queue', 'frontier', 'pubsub']
+const QUEUES: ComponentKind[] = ['queue', 'frontier', 'pubsub', 'broker']
 const EXTERNAL: ComponentKind[] = ['provider']
 
 /** Extra class for a piece's shape: drum for stores, pipe for queues, dashed for outside services. */

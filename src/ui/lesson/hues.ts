@@ -43,4 +43,5 @@ export const KIND_HUE: Record<ComponentKind, Hue> = {
   pubsub: 'yellow',
   blob: 'purple',
   blocksrv: 'orange',
+  broker: 'yellow',
 }
