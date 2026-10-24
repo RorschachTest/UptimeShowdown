@@ -14,6 +14,7 @@ export const v1ch10: ChapterEntry = {
       {
         title: 'Don’t make callers wait',
         body: 'Calling the push provider inside the request makes every caller wait for it, and fail when it fails. Put the request on a message queue and answer right away; workers send it.',
+        visual: { kind: 'versus', caption: 'Where the provider’s slowness and outages end up.', sides: [{ title: 'Call the provider inline', hue: 'red', good: ['Simple'], bad: ['Callers wait ~100 ms on every send', 'Provider down = callers get errors'] }, { title: 'Queue, then workers', hue: 'green', good: ['Callers are answered in a few ms', 'Provider down = messages wait'], bad: ['Delivery is a little later', 'A queue to run'] }] },
         solves: 'Fast answers; spikes and outages become lag, not errors.',
         worsens: 'Delivery happens a little later, and you now run a queue.',
         diagram: {
@@ -30,12 +31,14 @@ export const v1ch10: ChapterEntry = {
       {
         title: 'Third parties fail',
         body: 'Push, SMS and email providers have outages and rate limits. Retry failed sends with exponential backoff so messages wait out the outage instead of being lost; send what never succeeds to a dead-letter queue.',
+        visual: { kind: 'steps', caption: 'Exponential backoff: wait longer after each failure, so a struggling provider can recover.', steps: [{ title: 'Send', text: 'provider answers 503', hue: 'red' }, { title: 'Wait 1 s', text: 'retry: still down', hue: 'yellow' }, { title: 'Wait 2 s, 4 s…', text: 'retry: delivered', hue: 'green' }, { title: 'Never works?', text: 'park it in a dead-letter queue', hue: 'grey' }] },
         solves: 'No lost notifications.',
         worsens: 'At-least-once delivery: some messages go out twice.',
       },
       {
         title: 'Idempotency keys',
         body: 'Give each notification an ID. If a retry repeats a message the provider already delivered, the ID lets it (or you) drop the duplicate.',
+        visual: { kind: 'steps', caption: 'The ack got lost, not the message. The key turns the retry into a no-op.', steps: [{ title: 'Send #msg-77', text: 'the phone buzzes', hue: 'green' }, { title: 'Ack lost', text: 'the worker thinks it failed', hue: 'red' }, { title: 'Retry #msg-77', text: 'same key as before', hue: 'yellow' }, { title: 'Provider', text: 'already sent #msg-77: ignore', hue: 'blue' }] },
         solves: 'Retries without double buzzes.',
         worsens: 'An ID to generate and remember per message.',
       },

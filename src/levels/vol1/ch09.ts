@@ -14,6 +14,7 @@ export const v1ch09: ChapterEntry = {
       {
         title: 'The loop',
         body: 'Seed URLs go into the URL frontier. Downloaders fetch pages, parse them, skip content already seen, extract links, filter them and add new URLs back to the frontier.',
+        visual: { kind: 'steps', caption: 'A crawler is a loop: every page it fetches feeds new URLs back into the frontier.', steps: [{ title: 'Frontier', text: 'pick the next URL', hue: 'yellow' }, { title: 'Download', text: 'resolve DNS, fetch HTML', hue: 'orange' }, { title: 'Seen?', text: 'skip content we already have', hue: 'purple' }, { title: 'Extract', text: 'pull out links, filter them', hue: 'blue' }, { title: 'Back', text: 'new URLs join the frontier', hue: 'green' }] },
         solves: 'A pipeline that keeps going on its own.',
         worsens: 'Every stage must cope with a messy, hostile web.',
         diagram: { nodes: [['u', 'traffic'], ['f', 'frontier'], ['d', 'downloader']], wires: ['u>f', 'f>d'] },
@@ -21,6 +22,7 @@ export const v1ch09: ChapterEntry = {
       {
         title: 'Politeness',
         body: 'Sending many requests to one site at once looks like an attack and gets you blocked. Map each host to its own queue and let a downloader fetch from a host only after a pause.',
+        visual: { kind: 'versus', caption: 'Same downloaders, different manners.', sides: [{ title: 'One big queue', hue: 'red', good: ['Maximum speed'], bad: ['Ten downloaders hit the same site at once', 'You get blocked'] }, { title: 'One queue per host', hue: 'green', good: ['Each site sees one request at a time, with a pause', 'Thousands of sites crawled in parallel'], bad: ['Downloaders sometimes wait'] }] },
         solves: 'Sites tolerate you; you don’t get banned.',
         worsens: 'Downloaders sometimes wait on a host.',
       },
@@ -33,6 +35,7 @@ export const v1ch09: ChapterEntry = {
       {
         title: 'Robustness',
         body: 'Cache DNS answers: lookups are slow and the resolver has outages. Respect robots.txt. Limit URL depth and length to escape spider traps. Hash content to skip duplicate pages.',
+        visual: { kind: 'bars', caption: 'Pages per second per downloader.', unit: 'pages/s', rows: [{ label: 'DNS cache', value: 500, hue: 'green' }, { label: 'No DNS cache', value: 250, hue: 'orange', note: 'every fetch waits on a lookup, and a DNS outage stops the crawl' }] },
         solves: 'Speed, good manners and less wasted work.',
         worsens: 'Each check is a little extra work per page.',
       },

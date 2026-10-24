@@ -304,6 +304,8 @@ export interface InterviewLevel {
   editBudget: number
   /** Level-defined wrap-up questions (the bottleneck question is generated from the run). */
   wrapUp: WrapUpQuestion[]
+  /** Background shown before the questions: the situation, without giving away the hidden facts. */
+  brief?: { points: string[]; diagram?: LessonCard['diagram'] }
 }
 
 // ── Estimate levels (Chapter 2) ──
@@ -379,7 +381,28 @@ export interface LessonCard {
   worsens?: string
   /** A small read-only diagram: pieces and 'a>b' wires, laid out left to right. */
   diagram?: { nodes: [id: string, kind: ComponentKind][]; wires: string[] }
+  /** A picture or a small hands-on lab that explains the idea. */
+  visual?: LessonVisual
 }
+
+/** Palette names for lesson pictures (mapped to theme colours by the UI). */
+export type Hue = 'blue' | 'orange' | 'purple' | 'teal' | 'green' | 'red' | 'yellow' | 'grey'
+
+/** Lesson pictures. Static kinds are plain data; lab kinds are small interactive explainers. */
+export type LessonVisual =
+  /** A number split into fields, e.g. a 64-bit ID. */
+  | { kind: 'bits'; caption: string; fields: { label: string; bits: number; hue: Hue; note: string }[] }
+  /** Horizontal bars comparing a few values. */
+  | { kind: 'bars'; caption: string; unit: string; rows: { label: string; value: number; hue: Hue; note?: string }[] }
+  /** A coloured left-to-right flow of steps. */
+  | { kind: 'steps'; caption: string; steps: { title: string; text: string; hue: Hue }[] }
+  /** Two or more side-by-side options with pros and cons. */
+  | { kind: 'versus'; caption: string; sides: { title: string; hue: Hue; good: string[]; bad: string[] }[] }
+  /** Labs: try the idea with buttons and see what happens. */
+  | { kind: 'ringLab' }
+  | { kind: 'quorumLab' }
+  | { kind: 'bitPacker' }
+  | { kind: 'clockLab' }
 
 export interface Lesson {
   /** One line on what this chapter teaches. */

@@ -62,6 +62,14 @@ export const chapter11: InterviewLevel = {
     { id: 'ads', text: 'Ads in the feed', core: false },
     { id: 'stories', text: 'Stories', core: false },
   ],
+  brief: {
+    points: [
+      'A social app: people post, and the people who follow them see those posts in their home feed.',
+      'Opening the app shows the feed, so it must be fast. Posting should feel instant too.',
+      'A news feed service keeps a ready-made list of post IDs per user in a cache, fed through a queue.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['q', 'queue'], ['f', 'feed']], wires: ['u>lb', 'lb>q', 'q>f', 'lb>f'] },
+  },
   wrapUp: [
     {
       id: 'hybrid',

@@ -2,15 +2,22 @@ import { Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, type Edge, 
 import { COMPONENTS } from '../../engine/components'
 import type { ComponentKind, LessonCard } from '../../engine/types'
 import { ComponentIcon } from '../icons'
+import { HUE, KIND_HUE, tint } from './hues'
 
 type DiagramNodeData = { kind: ComponentKind }
 
 /** A piece as it looks on the board, without load or controls. */
 function DiagramNode({ data }: NodeProps<Node<DiagramNodeData>>) {
   const dark = data.kind === 'traffic'
+  const hue = KIND_HUE[data.kind]
   return (
-    <div className={`piece flex w-36 items-center gap-2 px-2.5 py-2 text-sm font-semibold ${dark ? 'bg-ink text-piece' : ''}`}>
-      <ComponentIcon kind={data.kind} className="size-4 shrink-0" />
+    <div
+      className={`piece flex w-36 items-center gap-2 px-2.5 py-2 text-sm font-semibold ${dark ? 'bg-ink text-piece' : ''}`}
+      style={dark ? undefined : { background: tint(hue, 18) }}
+    >
+      <span style={{ color: dark ? undefined : HUE[hue] }}>
+        <ComponentIcon kind={data.kind} className="size-4 shrink-0" />
+      </span>
       {COMPONENTS[data.kind].label}
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <Handle type="source" position={Position.Right} isConnectable={false} />
@@ -32,9 +39,22 @@ function layout(spec: NonNullable<LessonCard['diagram']>) {
   for (const [id] of spec.nodes) (perColumn[depth[id]!] ??= []).push(id)
   const nodes: Node<DiagramNodeData>[] = spec.nodes.map(([id, kind]) => {
     const col = perColumn[depth[id]!]!
-    return { id, type: 'piece', data: { kind }, position: { x: depth[id]! * COLUMN, y: (col.indexOf(id) - (col.length - 1) / 2) * ROW } }
+    return {
+      id,
+      type: 'piece',
+      data: { kind },
+      position: {
+        x: depth[id]! * COLUMN,
+        y: (col.indexOf(id) - (col.length - 1) / 2) * ROW,
+      },
+    }
   })
-  const edges: Edge[] = wires.map(([a, b]) => ({ id: `${a}>${b}`, source: a, target: b, markerEnd: { type: MarkerType.ArrowClosed, color: '#1d2733' } }))
+  const edges: Edge[] = wires.map(([a, b]) => ({
+    id: `${a}>${b}`,
+    source: a,
+    target: b,
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#1d2733' },
+  }))
   return { nodes, edges }
 }
 

@@ -1,4 +1,5 @@
 import { useGameStore } from '../../store'
+import { MiniDiagram } from '../lesson/MiniDiagram'
 import { FACT_LABELS } from './facts'
 
 const VERDICT = {
@@ -24,6 +25,20 @@ export function ScopePanel() {
             asked question to take it back.
           </p>
         </section>
+
+        {iv.level.brief && (
+          <section className="mt-4 grid gap-4 rounded-xl border-2 border-read/40 bg-read/8 px-5 py-4 md:grid-cols-[1fr_1.1fr]" aria-label="The situation">
+            <div>
+              <h3 className="text-sm font-bold tracking-wide text-read uppercase">The situation</h3>
+              <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed">
+                {iv.level.brief.points.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </div>
+            {iv.level.brief.diagram && <MiniDiagram spec={iv.level.brief.diagram} />}
+          </section>
+        )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <section aria-label="Questions">

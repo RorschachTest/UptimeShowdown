@@ -62,6 +62,14 @@ export const v2chapter1: InterviewLevel = {
     { id: 'live', text: 'Live wait times', core: false },
     { id: 'reviews', text: 'Reviews and ratings', core: false },
   ],
+  brief: {
+    points: [
+      'A local-search app: open it and see restaurants, shops and cafés near you.',
+      'Places almost never move; owners occasionally edit their page.',
+      'Two kinds of request reach us through a load balancer: nearby searches, and owners’ edits.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['geo', 'geoindex'], ['c', 'cache'], ['web', 'app'], ['db', 'sqldb']], wires: ['u>lb', 'lb>geo', 'geo>c', 'c>db', 'lb>web', 'web>db'] },
+  },
   wrapUp: [
     {
       id: 'precision',

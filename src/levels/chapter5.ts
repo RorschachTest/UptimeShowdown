@@ -74,6 +74,15 @@ export const chapter5: InterviewLevel = {
     { id: 'regions', text: 'Separate clusters per region', core: false },
     { id: 'evict', text: 'Custom eviction policies', core: false },
   ],
+  brief: {
+    points: [
+      'PlayArena is an online game. Each time a player joins a match, a game server looks up their profile: level, items, friends.',
+      'Profiles live in a SQL database. A cache sits in front and answers repeat lookups from memory in about a millisecond, so the database only sees the misses.',
+      'The profiles no longer fit in one cache machine, so they must be spread across several cache nodes, and every game server must agree which node holds which player.',
+      'Cache nodes come and go: they crash, and ops adds more before big events. Whenever a key ends up on a different node, the next read for it misses and goes to the database.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['c', 'cache'], ['db', 'sqldb']], wires: ['u>c', 'c>db'] },
+  },
   wrapUp: [
     {
       id: 'moved',

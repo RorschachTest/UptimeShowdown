@@ -62,6 +62,14 @@ export const chapter10: InterviewLevel = {
     { id: 'schedule', text: 'Scheduled sends', core: false },
     { id: 'analytics', text: 'Open-rate analytics', core: false },
   ],
+  brief: {
+    points: [
+      'Other teams’ services call our API when something happens: an order shipped, a friend request, a sale.',
+      'We turn each call into a push notification and hand it to the push provider, an outside service that delivers it to the phone.',
+      'Callers must not be slowed down by us or by the provider.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['web', 'app'], ['q', 'queue'], ['w', 'worker'], ['p', 'provider']], wires: ['u>lb', 'lb>web', 'web>q', 'q>w', 'w>p'] },
+  },
   wrapUp: [
     {
       id: 'queue',

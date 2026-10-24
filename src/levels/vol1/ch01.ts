@@ -28,6 +28,7 @@ export const v1ch01: ChapterEntry = {
       {
         title: 'Scale up, then out',
         body: 'A bigger machine needs no code changes but gets expensive fast and still crashes as one. Many smaller servers behind a load balancer keep going when one dies. Users reach a single address, so extra servers only help behind a load balancer.',
+        visual: { kind: 'versus', caption: 'Two ways to add capacity.', sides: [{ title: 'Scale up (bigger box)', hue: 'blue', good: ['No code changes', 'Quick'], bad: ['Price climbs faster than capacity', 'Still one machine that can crash', 'There is a biggest box'] }, { title: 'Scale out (more boxes)', hue: 'green', good: ['Nearly unlimited', 'Survives one crashing'], bad: ['Needs a load balancer', 'Servers must not keep state'] }] },
         solves: 'Capacity that grows with servers, and survival of a crash.',
         worsens: 'Servers must be stateless, and there is another piece to run.',
         diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['web', 'app'], ['db', 'sqldb']], wires: ['u>lb', 'lb>web', 'web>db'] },
@@ -35,6 +36,7 @@ export const v1ch01: ChapterEntry = {
       {
         title: 'Take reads off the database',
         body: 'Most traffic is reads. Read replicas copy the data to more machines; a cache keeps hot answers in memory. Both trade freshness for speed: a replica or a cache can be behind the latest write.',
+        visual: { kind: 'bars', caption: 'Reads the primary database still serves, out of 2,000 a second.', unit: 'reads/s', rows: [{ label: 'Primary only', value: 2000, hue: 'red' }, { label: '+ 2 read replicas', value: 667, hue: 'orange', note: 'reads spread over three copies' }, { label: '+ cache (85% hits)', value: 300, hue: 'green', note: 'only misses reach the database' }] },
         solves: 'The database stops being the bottleneck for reads.',
         worsens: 'Stale reads, unless own-writes go to the primary or the cache is updated on write.',
         diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['web', 'app'], ['c', 'cache'], ['db', 'sqldb']], wires: ['u>lb', 'lb>web', 'web>c', 'c>db'] },
@@ -42,6 +44,7 @@ export const v1ch01: ChapterEntry = {
       {
         title: 'Serve static files from the edge',
         body: 'Images and scripts are the same for everyone. A CDN keeps copies near users, so they load fast across the world and never reach your servers.',
+        visual: { kind: 'bars', caption: 'Time to fetch an image for a user on another continent.', unit: 'ms', rows: [{ label: 'From your server', value: 180, hue: 'orange' }, { label: 'From a CDN edge', value: 20, hue: 'teal', note: 'a copy in a city near the user' }] },
         solves: 'Latency for distant users and bandwidth at the origin.',
         worsens: 'Only static files benefit; short cache times send more misses home.',
         diagram: { nodes: [['u', 'traffic'], ['cdn', 'cdn'], ['lb', 'lb'], ['web', 'app'], ['db', 'sqldb']], wires: ['u>cdn', 'cdn>lb', 'lb>web', 'web>db'] },
@@ -49,6 +52,7 @@ export const v1ch01: ChapterEntry = {
       {
         title: 'Diagnose before you add',
         body: 'Name the resource that is full first: compute (web servers), storage (the database or cache) or network (bytes and distance). Adding web servers to a storage-bound system only adds load on the database.',
+        visual: { kind: 'steps', caption: 'A loop you will repeat in every chapter.', steps: [{ title: 'Watch', text: 'which piece turns amber or red?', hue: 'yellow' }, { title: 'Name it', text: 'compute, storage or network?', hue: 'purple' }, { title: 'Fix that', text: 'the smallest change for that bottleneck', hue: 'blue' }, { title: 'Run again', text: 'the bottleneck moves: repeat', hue: 'green' }] },
       },
     ],
     quiz: [

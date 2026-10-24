@@ -84,6 +84,15 @@ export const chapter6: InterviewLevel = {
     { id: 'txn', text: 'Transactions across carts', core: false },
     { id: 'ttl', text: 'Expire abandoned carts', core: false },
   ],
+  brief: {
+    points: [
+      'We sell online. Every shopper has a cart stored under its cart ID: get(cartId) shows it, put(cartId, cart) saves it.',
+      'You are building the store itself: a cluster of nodes that spreads cart keys around and keeps several copies of each.',
+      'The network between nodes is not perfect. Sometimes a node can still run but can’t reach the others.',
+      'You choose how many copies to keep, how many must confirm a write or answer a read, and what to do when two writes collide.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['kv', 'kvstore']], wires: ['u>kv'] },
+  },
   wrapUp: [
     {
       id: 'rw',
