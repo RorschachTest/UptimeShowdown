@@ -104,9 +104,11 @@ export const chapter5: InterviewLevel = {
       requires: [{ kind: 'cache', why: 'Profiles must be served from a cache: the database alone can’t take 20,000 reads a second.' }],
       mustPassThrough: [{ types: ['page'], kind: 'cache', why: 'Every profile read must ask the cache first.' }],
     },
+    names: [{ kind: 'traffic', name: 'Game servers' }, { kind: 'cache', name: 'Profile cache' }, { kind: 'sqldb', name: 'Profiles DB' }],
+    data: { cache: ['playerId → profile'], sqldb: ['profiles: id, level, items, friends'] },
     requestTypes: [
-      { id: 'page', label: 'Profile read', needs: ['lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
-      { id: 'write', label: 'Profile save', needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'page', label: 'Profile read', api: 'get(playerId)', does: { lookup: 'find the profile' }, needs: ['lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'write', label: 'Profile save', api: 'set(playerId)', does: { write: 'save the profile' }, needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0 },
     ],
     stages: [main, curveball],
   },

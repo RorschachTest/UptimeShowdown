@@ -12,6 +12,7 @@ export const cdn = defineComponent({
   capacityRps: 100_000,
   baseLatencyMs: 5,
   costPerMin: 25,
+  does: 'passes other requests through',
   serves: ['static'],
   partial: true,
   edge: true,

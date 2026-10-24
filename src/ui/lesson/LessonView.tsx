@@ -1,4 +1,4 @@
-import { chapterById } from '../../levels'
+import { boardChapter, chapterById } from '../../levels'
 import { useGameStore } from '../../store'
 import { QuestionCard } from '../estimate/QuestionCard'
 import { CARD_HUES, HUE, tint } from './hues'
@@ -79,7 +79,7 @@ export function LessonView() {
                 )}
                 {card.diagram && (
                   <div className="mt-4">
-                    <MiniDiagram spec={card.diagram} />
+                    <MiniDiagram spec={card.diagram} chapter={boardChapter(entry)} />
                   </div>
                 )}
                 {(card.solves || card.worsens) && (

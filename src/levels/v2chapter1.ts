@@ -92,9 +92,11 @@ export const v2chapter1: InterviewLevel = {
       requires: [{ kind: 'geoindex', why: 'Nearby search needs a geospatial index.' }],
       mustPassThrough: [{ types: ['page'], kind: 'cache', why: 'Place details are read on every search: serve them from a cache.' }],
     },
+    names: [{ kind: 'lb', name: 'API gateway' }, { kind: 'geoindex', name: 'Location service' }, { kind: 'app', name: 'Business service' }, { kind: 'cache', name: 'Place cache' }, { kind: 'sqldb', name: 'Places DB' }],
+    data: { geoindex: ['geohash → place ids'], cache: ['place id → details'], sqldb: ['places: id, name, lat, lng'] },
     requestTypes: [
-      { id: 'page', label: 'Nearby search', needs: ['geo', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
-      { id: 'write', label: 'Owner edit', needs: ['compute', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'page', label: 'Nearby search', api: 'GET /search?lat,lng,r', does: { geo: 'find nearby place ids', lookup: 'load place details' }, needs: ['geo', 'lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'write', label: 'Owner edit', api: 'PUT /places/{id}', does: { compute: 'check the edit', write: 'save the place' }, needs: ['compute', 'write'], weight: 1, consistency: 'any', distanceMs: 0 },
     ],
     stages: [main, curveball],
   },

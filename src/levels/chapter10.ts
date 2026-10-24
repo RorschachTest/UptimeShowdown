@@ -91,7 +91,9 @@ export const chapter10: InterviewLevel = {
     rules: {
       requires: [{ kind: 'queue', why: 'Sending must not wait on the provider: put a message queue between the API and the workers.' }],
     },
-    requestTypes: [{ id: 'write', label: 'Notification', needs: ['compute', 'enqueue', 'work', 'deliver'], weight: 1, consistency: 'any', distanceMs: 0, asyncAfter: 'enqueue' }],
+    names: [{ kind: 'traffic', name: 'Calling services' }, { kind: 'app', name: 'Notification API' }, { kind: 'queue', name: 'Notify queue' }, { kind: 'worker', name: 'Push workers' }, { kind: 'provider', name: 'APNs / FCM' }],
+    data: { queue: ['msg id, user, payload'] },
+    requestTypes: [{ id: 'write', label: 'Notification', api: 'POST /notify', does: { compute: 'check, load settings', enqueue: 'queue the message', work: 'build the push', deliver: 'push to the phone' }, needs: ['compute', 'enqueue', 'work', 'deliver'], weight: 1, consistency: 'any', distanceMs: 0, asyncAfter: 'enqueue' }],
     stages: [main, curveball],
   },
 }

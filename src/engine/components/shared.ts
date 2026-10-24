@@ -139,6 +139,8 @@ export interface ComponentDef extends Tradeoff {
   failover?: (node: SimNode) => boolean
   /** Violation counted when an instance crashes without failover (its data is gone). */
   crashLoses?: string
+  /** What this piece does for requests it passes on without serving (routers, limiters), shown on the piece. */
+  does?: string
   /** A hard rule about this piece's own settings; returns the problem, or null when valid. */
   validate?: (node: SimNode) => string | null
 }

@@ -1,6 +1,7 @@
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
 import { useGameStore } from '../../store'
 import { fmtInt, fmtPct } from '../format'
+import { useFlowMap } from '../design'
 import { TYPE_COLORS } from '../settings'
 
 const DOT_TRAVEL_SECONDS = 1.6
@@ -18,6 +19,10 @@ export function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositio
   const rps = useGameStore((s) => s.sim.edgeRps[id] ?? 0)
   const byType = useGameStore((s) => s.sim.edgeTypes[id] ?? EMPTY)
   const types = useGameStore((s) => s.chapter.requestTypes)
+  const designView = useGameStore((s) => s.designView)
+  // Endpoints this wire carries, from the design itself (shown even before a run).
+  const carried = useFlowMap().wires[id] ?? []
+  const apis = [...new Set([...carried].sort((a, b) => a - b).map((t) => types[t]!))].map((rt) => ({ id: rt.id, text: rt.api ?? rt.label }))
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
 
   // This wire's own mix, busiest type first.
@@ -26,7 +31,7 @@ export function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositio
     .filter((row) => row.rps >= 0.5)
     .sort((a, b) => b.rps - a.rps)
 
-  const dots = dotCount(rps)
+  const dots = designView ? 0 : dotCount(rps)
   // Dot i takes the type whose cumulative share of this wire covers it.
   const colorOf = (i: number) => {
     let cum = 0
@@ -45,7 +50,26 @@ export function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositio
           <animateMotion dur={`${DOT_TRAVEL_SECONDS}s`} begin={`${(-i * DOT_TRAVEL_SECONDS) / dots}s`} repeatCount="indefinite" path={path} />
         </circle>
       ))}
-      {rps >= 1 && (
+      {apis.length > 0 && (
+        <EdgeLabelRenderer>
+          <div
+            className="nodrag nopan pointer-events-none absolute flex flex-col items-center gap-0.5"
+            style={{ transform: `translate(-50%, 0) translate(${labelX}px, ${labelY + 4}px)` }}
+            aria-label={`Carries ${apis.map((a) => a.text).join(', ')}`}
+          >
+            {apis.map((a) => (
+              <span
+                key={a.id}
+                className="rounded-md border border-ink/25 bg-piece px-1.5 py-px font-mono text-[10.5px] font-semibold whitespace-nowrap"
+                style={{ color: TYPE_COLORS[a.id] ?? 'var(--color-ink)' }}
+              >
+                {a.text}
+              </span>
+            ))}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      {rps >= 1 && !designView && (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan group pointer-events-auto absolute"

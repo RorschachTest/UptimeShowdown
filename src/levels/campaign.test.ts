@@ -41,7 +41,7 @@ describe('campaign', () => {
         for (const card of entry.lesson.cards) {
           if (!card.diagram) continue
           const ids = new Set(card.diagram.nodes.map(([id]) => id))
-          for (const w of card.diagram.wires) for (const end of w.split('>')) expect(ids.has(end), `${card.title}: ${w}`).toBe(true)
+          for (const w of card.diagram.wires) for (const end of w.split('|')[0]!.split('>')) expect(ids.has(end), `${card.title}: ${w}`).toBe(true)
         }
       })
 

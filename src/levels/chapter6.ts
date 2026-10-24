@@ -114,9 +114,11 @@ export const chapter6: InterviewLevel = {
     rules: {
       requires: [{ kind: 'kvstore', why: 'This chapter is about building the key-value store itself.' }],
     },
+    names: [{ kind: 'traffic', name: 'Cart service' }, { kind: 'kvstore', name: 'Cart store' }],
+    data: { kvstore: ['cartId → items + version clock'] },
     requestTypes: [
-      { id: 'page', label: 'Get cart', needs: ['lookup'], weight: 1, consistency: 'ryw', distanceMs: 0 },
-      { id: 'write', label: 'Put cart', needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0, conflicts: 0.02 },
+      { id: 'page', label: 'Get cart', api: 'get(cartId)', does: { lookup: 'read from R copies' }, needs: ['lookup'], weight: 1, consistency: 'ryw', distanceMs: 0 },
+      { id: 'write', label: 'Put cart', api: 'put(cartId, cart)', does: { write: 'write to W of N copies' }, needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0, conflicts: 0.02 },
     ],
     stages: [main, curveball],
   },

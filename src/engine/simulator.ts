@@ -125,9 +125,28 @@ export function stageFinished(state: SimState): boolean {
   return state.tick >= currentStage(state).durationS * TICKS_PER_SEC
 }
 
+/** Wires a request of type t at step `stepIdx` may take out of node `from`: those that can still complete it. */
+export function validEdges(state: Pick<SimState, 'chapter' | 'outEdges' | 'reach'>, nodesById: Map<string, SimNode>, from: string, t: number, stepIdx: number): SimEdge[] {
+  let valid = (state.outEdges[from] ?? []).filter((e) => state.reach[e.target]?.[t]?.[stepIdx] === true)
+  // Edge pieces (CDN) work like a separate hostname: they get what they serve, and other
+  // requests skip them when another path exists. As the only path they proxy everything.
+  const need = state.chapter.requestTypes[t]!.needs[stepIdx]
+  const kindOf = (e: SimEdge) => nodesById.get(e.target)!.kind
+  const edgeServing = valid.filter((e) => COMPONENTS[kindOf(e)].edge && serves(kindOf(e), need))
+  const nonEdge = valid.filter((e) => !COMPONENTS[kindOf(e)].edge)
+  if (edgeServing.length > 0) valid = edgeServing
+  else if (nonEdge.length > 0) valid = nonEdge
+  return valid
+}
+
+/** Steps a full (non-partial) node completes in one visit, starting at `step`. */
+export function stepsDone(kind: ComponentKind, needs: Capability[], step: number): number {
+  return advance(kind, needs, step)
+}
+
 /** One tick (100 ms of game time). Pure: never mutates `state`. */
 export function step(state: SimState): SimState {
-  const { chapter, outEdges, reach } = state
+  const { chapter } = state
   const stage = currentStage(state)
   const types = chapter.requestTypes
   const nodesById = new Map<string, SimNode>(state.graph.nodes.map((n) => [n.id, n]))
@@ -175,15 +194,7 @@ export function step(state: SimState): SimState {
 
     const route = (t: number, stepIdx: number, count: number, latencyMs: number) => {
       if (count <= EPSILON) return
-      let valid = (outEdges[id] ?? []).filter((e) => reach[e.target]?.[t]?.[stepIdx] === true)
-      // Edge pieces (CDN) work like a separate hostname: they get what they serve, and other
-      // requests skip them when another path exists. As the only path they proxy everything.
-      const need = types[t]!.needs[stepIdx]
-      const kindOf = (e: SimEdge) => nodesById.get(e.target)!.kind
-      const edgeServing = valid.filter((e) => COMPONENTS[kindOf(e)].edge && serves(kindOf(e), need))
-      const nonEdge = valid.filter((e) => !COMPONENTS[kindOf(e)].edge)
-      if (edgeServing.length > 0) valid = edgeServing
-      else if (nonEdge.length > 0) valid = nonEdge
+      const valid = validEdges(state, nodesById, id, t, stepIdx)
       if (valid.length === 0) {
         const bg = isBg(t, stepIdx)
         if (!types[t]!.abusive && !bg) stats.deadEnds += count

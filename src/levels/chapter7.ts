@@ -105,7 +105,8 @@ export const chapter7: InterviewLevel = {
     rules: {
       requires: [{ kind: 'idgen', why: 'Every new order needs an ID from your ID generator.' }],
     },
-    requestTypes: [{ id: 'write', label: 'New ID', needs: ['id'], weight: 1, consistency: 'any', distanceMs: 0 }],
+    names: [{ kind: 'traffic', name: 'Order servers' }, { kind: 'idgen', name: 'ID service' }],
+    requestTypes: [{ id: 'write', label: 'New ID', api: 'nextId()', does: { id: 'issue a unique ID' }, needs: ['id'], weight: 1, consistency: 'any', distanceMs: 0 }],
     stages: [main, curveball],
   },
 }

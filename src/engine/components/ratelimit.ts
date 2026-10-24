@@ -30,6 +30,7 @@ export const ratelimit = defineComponent({
   capacityRps: 20_000,
   baseLatencyMs: 1,
   costPerMin: 15,
+  does: 'caps each client’s rate',
   serves: [],
   balances: true,
   bound: 'network',

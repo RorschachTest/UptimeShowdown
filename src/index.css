@@ -46,6 +46,38 @@ body {
     border-radius: 10px;
     box-shadow: 3px 4px 0 var(--color-ink);
   }
+
+  /* Shapes by kind, so a design reads at a glance: stores are drums, queues are pipes, outside services are dashed. */
+  .piece-store {
+    border-radius: 26px / 16px;
+  }
+  .piece-store::before {
+    content: '';
+    position: absolute;
+    inset: -2px -2px auto -2px;
+    height: 18px;
+    border: 2px solid var(--color-ink);
+    border-radius: 50%;
+    background: inherit;
+    pointer-events: none;
+  }
+  .piece-queue {
+    border-radius: 18px;
+  }
+  .piece-queue::after {
+    content: '';
+    position: absolute;
+    top: 22%;
+    right: 10px;
+    width: 20px;
+    height: 56%;
+    background: repeating-linear-gradient(90deg, var(--color-ink) 0 2px, transparent 2px 7px);
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .piece-external {
+    border-style: dashed;
+  }
 }
 
 @keyframes drop-flash {

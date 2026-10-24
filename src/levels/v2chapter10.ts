@@ -93,9 +93,11 @@ export const v2chapter10: InterviewLevel = {
     rules: {
       requires: [{ kind: 'leaderboard', why: 'This chapter is about the leaderboard store itself.' }],
     },
+    names: [{ kind: 'traffic', name: 'Game servers' }, { kind: 'leaderboard', name: 'Leaderboard' }],
+    data: { leaderboard: ['season: player → score, sorted'] },
     requestTypes: [
-      { id: 'write', label: 'Score update', needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0 },
-      { id: 'page', label: 'Leaderboard view', needs: ['lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'write', label: 'Score update', api: 'POST /scores', does: { write: 'add to the player’s score' }, needs: ['write'], weight: 1, consistency: 'any', distanceMs: 0 },
+      { id: 'page', label: 'Leaderboard view', api: 'GET /leaderboard', does: { lookup: 'top 10 + my rank' }, needs: ['lookup'], weight: 1, consistency: 'any', distanceMs: 0 },
     ],
     stages: [main, curveball],
   },
