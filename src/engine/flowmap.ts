@@ -17,6 +17,7 @@ const DOES: Record<Capability, string> = {
   feed: 'serves ready feeds',
   suggest: 'suggests completions',
   push: 'holds the live connection',
+  publish: 'publishes to subscribers',
 }
 
 export interface PieceFlow {

@@ -12,6 +12,7 @@ import { kvstore } from './kvstore'
 import { lb } from './lb'
 import { leaderboard } from './leaderboard'
 import { provider } from './provider'
+import { pubsub } from './pubsub'
 import { queue } from './queue'
 import { ratelimit } from './ratelimit'
 import { defineComponent, type ComponentDef, type CountSetting } from './shared'
@@ -37,7 +38,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -78,6 +79,7 @@ export const DEFAULT_CONFIG: NodeConfig = {
   tsRetention: 'raw',
   wsReconnect: 'immediate',
   wsAssign: 'random',
+  pubsubHashing: 'mod',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {

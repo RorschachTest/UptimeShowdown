@@ -40,4 +40,5 @@ export const KIND_HUE: Record<ComponentKind, Hue> = {
   trie: 'teal',
   tsdb: 'purple',
   wsgateway: 'blue',
+  pubsub: 'yellow',
 }
