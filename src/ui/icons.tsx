@@ -61,6 +61,11 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <circle cx="12" cy="10" r="2.3" />
     </>
   ),
+  leaderboard: (
+    <>
+      <path d="M4 20V13h4v7M10 20V8h4v12M16 20v-9h4v9M3 20h18" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />
