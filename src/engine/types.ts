@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -19,6 +19,8 @@ export type CacheHashing = 'mod' | 'ring' | 'vnodes'
 export type Quorum = 'one' | 'quorum' | 'all'
 export type KvCopies = 1 | 3 | 5
 export type KvConflict = 'lww' | 'vclock'
+export type IdScheme = 'ticket' | 'multimaster' | 'uuid' | 'snowflake'
+export type IdClock = 'trust' | 'wait'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -36,6 +38,8 @@ export interface NodeConfig {
   kvWrite: Quorum
   kvRead: Quorum
   kvConflict: KvConflict
+  idScheme: IdScheme
+  idClock: IdClock
 }
 
 export interface SimNode {
@@ -224,7 +228,7 @@ export interface SimState {
 // ── Interview levels (Chapter 3 shell, reused by later problem chapters) ──
 
 /** A hidden parameter of the problem, shown as "?" until a question reveals it. */
-export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth' | 'data' | 'conflicts'
+export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth' | 'data' | 'conflicts' | 'ordering'
 
 export interface QuestionCard {
   id: string

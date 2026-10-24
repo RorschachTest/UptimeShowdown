@@ -50,6 +50,11 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M9 9.5h2M9 16h2" />
     </>
   ),
+  idgen: (
+    <>
+      <path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />
