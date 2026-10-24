@@ -152,6 +152,11 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M7 7h.01M7 12h.01M7 17h.01" />
     </>
   ),
+  aggregator: (
+    <>
+      <path d="M4 6h6M4 12h6M4 18h6M10 6l5 6-5 6M15 12h5" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

@@ -1,6 +1,7 @@
 import type { Capability, ComponentKind, NodeConfig, SimNode } from '../types'
 import { allinone } from './allinone'
 import { app } from './app'
+import { aggregator } from './aggregator'
 import { blob } from './blob'
 import { blocksrv } from './blocksrv'
 import { broker } from './broker'
@@ -41,7 +42,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker, aggregator }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -89,6 +90,9 @@ export const DEFAULT_CONFIG: NodeConfig = {
   brokerAcks: 'leader',
   brokerReplicas: 1,
   brokerCommit: 'before',
+  aggLate: 'drop',
+  aggDedupe: false,
+  aggKeys: 'byAd',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
