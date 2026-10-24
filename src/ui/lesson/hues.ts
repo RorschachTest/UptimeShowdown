@@ -37,4 +37,5 @@ export const KIND_HUE: Record<ComponentKind, Hue> = {
   provider: 'red',
   frontier: 'yellow',
   downloader: 'orange',
+  trie: 'teal',
 }

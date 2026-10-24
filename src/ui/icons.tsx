@@ -103,6 +103,15 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M5 20h14" />
     </>
   ),
+  trie: (
+    <>
+      <circle cx="12" cy="5" r="2" />
+      <circle cx="6" cy="13" r="2" />
+      <circle cx="18" cy="13" r="2" />
+      <circle cx="9" cy="20" r="1.5" />
+      <path d="M11 6.5 7 11.5M13 6.5l4 5M6.8 15 8.5 18.6" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

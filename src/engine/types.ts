@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -26,6 +26,9 @@ export type BoardStore = 'sql' | 'zset'
 export type BoardShard = 'hash' | 'score'
 export type ProviderRetry = 'drop' | 'retry'
 export type FanoutMode = 'write' | 'read' | 'hybrid'
+export type TrieShard = 'letter' | 'map'
+export type TrieBuild = 'live' | 'weekly'
+export type WorkSample = 'all' | 'tenth'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -58,6 +61,11 @@ export interface NodeConfig {
   crawlDepth: boolean
   dlDns: boolean
   dlDedupe: boolean
+  trieTopK: boolean
+  trieShard: TrieShard
+  trieBuild: TrieBuild
+  trieBrowserCache: boolean
+  workSample: WorkSample
 }
 
 export interface SimNode {
@@ -124,7 +132,7 @@ export interface SimEvent {
 /** Kept for older level data; every event is a SimEvent. */
 export type CrashEvent = SimEvent
 
-export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting' | 'cacheNodes' | 'hashing'
+export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting' | 'cacheNodes' | 'hashing' | 'sampling'
 
 export interface Stage {
   id: string
