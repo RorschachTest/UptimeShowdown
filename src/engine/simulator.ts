@@ -142,8 +142,12 @@ export function step(state: SimState): SimState {
     const target = state.order.find((id) => nodesById.get(id)?.kind === ev.target)
     if (!target) continue
     const live = seconds >= ev.t && seconds < ev.t + (ev.durationS ?? Infinity)
-    if (ev.kind === 'crash' && live) crashed.add(target)
-    if (seconds >= ev.t && seconds < ev.t + 1 / TICKS_PER_SEC) (fired[target] ??= []).push(ev)
+    const spec = COMPONENTS[ev.target]
+    const failsOver = spec.failover?.(nodesById.get(target)!) === true
+    const firesNow = seconds >= ev.t && seconds < ev.t + 1 / TICKS_PER_SEC
+    if (ev.kind === 'crash' && live && !failsOver) crashed.add(target)
+    if (ev.kind === 'crash' && firesNow && !failsOver && spec.crashLoses) stats.violations[spec.crashLoses] = (stats.violations[spec.crashLoses] ?? 0) + 1
+    if (firesNow) (fired[target] ??= []).push(ev)
     if (live) (active[target] ??= []).push(ev)
   }
 

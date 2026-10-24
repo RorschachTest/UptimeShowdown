@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -129,6 +129,10 @@ export interface ComponentDef extends Tradeoff {
   review?: (node: SimNode, ctx: ReviewContext) => string[]
   /** A hard rule about where this piece may sit; returns the problem, or null when placed legally. */
   placement?: (ctx: PlacementContext) => string | null
+  /** A standby takes over when an instance crashes, so crashes cost nothing (e.g. a replica with failover). */
+  failover?: (node: SimNode) => boolean
+  /** Violation counted when an instance crashes without failover (its data is gone). */
+  crashLoses?: string
   /** A hard rule about this piece's own settings; returns the problem, or null when valid. */
   validate?: (node: SimNode) => string | null
 }

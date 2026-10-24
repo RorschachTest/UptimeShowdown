@@ -1,7 +1,7 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
 export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo'
@@ -22,6 +22,8 @@ export type KvConflict = 'lww' | 'vclock'
 export type IdScheme = 'ticket' | 'multimaster' | 'uuid' | 'snowflake'
 export type IdClock = 'trust' | 'wait'
 export type GeoIndex = 'scan' | 'grid' | 'geohash' | 'quadtree'
+export type BoardStore = 'sql' | 'zset'
+export type BoardShard = 'hash' | 'score'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -43,6 +45,9 @@ export interface NodeConfig {
   idClock: IdClock
   geoIndex: GeoIndex
   geoNeighbours: boolean
+  boardStore: BoardStore
+  boardShard: BoardShard
+  boardReplica: boolean
 }
 
 export interface SimNode {

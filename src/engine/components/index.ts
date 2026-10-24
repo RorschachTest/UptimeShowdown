@@ -7,6 +7,7 @@ import { geoindex } from './geoindex'
 import { idgen } from './idgen'
 import { kvstore } from './kvstore'
 import { lb } from './lb'
+import { leaderboard } from './leaderboard'
 import { ratelimit } from './ratelimit'
 import { defineComponent, type ComponentDef, type CountSetting } from './shared'
 import { sqldb } from './sqldb'
@@ -27,7 +28,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -48,6 +49,9 @@ export const DEFAULT_CONFIG: NodeConfig = {
   idClock: 'trust',
   geoIndex: 'scan',
   geoNeighbours: false,
+  boardStore: 'sql',
+  boardShard: 'hash',
+  boardReplica: false,
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
