@@ -45,4 +45,5 @@ export const KIND_HUE: Record<ComponentKind, Hue> = {
   blocksrv: 'orange',
   broker: 'yellow',
   aggregator: 'orange',
+  wallet: 'purple',
 }
