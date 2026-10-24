@@ -84,6 +84,13 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 12l16-7-5 16-3-7-8-2Z" />
     </>
   ),
+  feed: (
+    <>
+      <rect x="4" y="4" width="16" height="5" rx="1" />
+      <rect x="4" y="11" width="16" height="4" rx="1" />
+      <path d="M4 18h16" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

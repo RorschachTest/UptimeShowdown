@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -25,6 +25,7 @@ export type GeoIndex = 'scan' | 'grid' | 'geohash' | 'quadtree'
 export type BoardStore = 'sql' | 'zset'
 export type BoardShard = 'hash' | 'score'
 export type ProviderRetry = 'drop' | 'retry'
+export type FanoutMode = 'write' | 'read' | 'hybrid'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -51,6 +52,7 @@ export interface NodeConfig {
   boardReplica: boolean
   providerRetry: ProviderRetry
   providerDedupe: boolean
+  fanoutMode: FanoutMode
 }
 
 export interface SimNode {
@@ -89,6 +91,8 @@ export interface RequestType {
   conflicts?: number
   /** The user is answered once this step is done; later steps run in the background (lag, not latency; losses are violations). */
   asyncAfter?: Capability
+  /** Followers who should see each of these posts (news-feed fanout). */
+  fanout?: number
 }
 
 export interface TrafficPoint {

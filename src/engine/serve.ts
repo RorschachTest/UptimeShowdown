@@ -1,11 +1,10 @@
-import { COMPONENTS, tierMult, type Served, type ServeContext } from './components'
+import { BUFFER_TICKS, COMPONENTS, tierMult, type Served, type ServeContext } from './components'
+
+export { BUFFER_TICKS }
 import { addFlow, parseKey, TICK_MS, TICKS_PER_SEC } from './flows'
 import type { Flows, SimNode } from './types'
 
 /** Default serving model: one capacity pool in weighted units, with an optional backlog. */
-/** Backlog a queue-fed node may hold, in ticks of its capacity (a minute). */
-export const BUFFER_TICKS = 600
-
 export function serveGeneric(node: SimNode, { instances, inflow, backlog, chapter, buffered }: ServeContext, queueTicks?: number): Served {
   const def = COMPONENTS[node.kind]
   const weights = chapter.requestTypes.map((rt) => rt.weight)
