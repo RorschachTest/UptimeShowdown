@@ -13,6 +13,7 @@ export const app = defineComponent({
   serves: ['compute', 'static'],
   tiered: true,
   choices: [tierSetting],
+  needsRouter: true,
   count: {
     field: 'instances',
     label: 'Instances',

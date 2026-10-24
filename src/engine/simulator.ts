@@ -2,14 +2,14 @@ import { COMPONENTS, hitRate, serves, type ServeContext } from './components'
 import { addFlow, EPSILON, flowKey, parseKey, TICKS_PER_SEC } from './flows'
 import { serveGeneric } from './serve'
 import { addStats, bucketIndex, emptyStats } from './scoring'
-import type { Capability, Chapter, ComponentKind, Flows, Graph, NodeRuntime, NodeTickStats, SimEdge, SimNode, SimState, Stage, TickStats } from './types'
+import type { Capability, Chapter, ComponentKind, Flows, Graph, NodeRuntime, NodeTickStats, SimEdge, SimEvent, SimNode, SimState, Stage, TickStats } from './types'
 
 export { TICK_MS, TICKS_PER_SEC } from './flows'
 /** Rolling window for live metrics: 5 s of game time. */
 export const WINDOW_TICKS = 50
 
-/** Pieces scaled by instance count can only use more than one instance behind a load balancer. */
-const needsLb = (kind: ComponentKind) => COMPONENTS[kind].count?.field === 'instances'
+/** Some pieces can only use more than one instance behind a router (load balancer, API gateway). */
+const needsLb = (kind: ComponentKind) => COMPONENTS[kind].needsRouter
 
 export function currentStage(state: Pick<SimState, 'chapter' | 'stageIndex'>): Stage {
   return state.chapter.stages[state.stageIndex]!
@@ -132,12 +132,18 @@ export function step(state: SimState): SimState {
   const stats: TickStats = emptyStats()
   const seconds = state.tick / TICKS_PER_SEC
 
-  // Crash events knock one instance off the first node of the target kind.
+  // Events target the first node of their kind. Crashes knock one instance off while active;
+  // other kinds are handed to the component (fired this tick, or in effect now).
   const crashed = new Set<string>()
+  const fired: Record<string, SimEvent[]> = {}
+  const active: Record<string, SimEvent[]> = {}
   for (const ev of stage.events) {
-    if (seconds < ev.t || seconds >= ev.t + ev.durationS) continue
     const target = state.order.find((id) => nodesById.get(id)?.kind === ev.target)
-    if (target) crashed.add(target)
+    if (!target) continue
+    const live = seconds >= ev.t && seconds < ev.t + (ev.durationS ?? Infinity)
+    if (ev.kind === 'crash' && live) crashed.add(target)
+    if (seconds >= ev.t && seconds < ev.t + 1 / TICKS_PER_SEC) (fired[target] ??= []).push(ev)
+    if (live) (active[target] ??= []).push(ev)
   }
 
   // Abusive traffic never counts toward uptime: a lost scraper request is a bot stopped.
@@ -212,7 +218,8 @@ export function step(state: SimState): SimState {
       continue
     }
 
-    const ctx: ServeContext = { instances, inflow, backlog, chapter, stage }
+    const prevState = state.runtime[id]?.state
+    const ctx: ServeContext = { instances, inflow, backlog, chapter, stage, seconds, state: prevState, fired: fired[id] ?? [], active: active[id] ?? [] }
     const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx)
     for (const [t, n] of Object.entries(res.dropped)) fail(Number(t), n)
     // Rejections are deliberate: scrapers stopped is good, real users throttled is a violation.
@@ -221,9 +228,10 @@ export function step(state: SimState): SimState {
       fail(Number(t), n)
     }
     stats.stale += res.stale
+    for (const [k, v] of Object.entries(res.violations ?? {})) stats.violations[k] = (stats.violations[k] ?? 0) + v
     const droppedTotal = Object.values(res.dropped).reduce((s, n) => s + n, 0)
 
-    const h = hitRate(node)
+    const h = res.hitRate ?? hitRate(node)
     let staticUnits = 0
     let allUnits = 0
     for (const [k, p] of Object.entries(res.served)) {
@@ -245,7 +253,7 @@ export function step(state: SimState): SimState {
       }
     }
 
-    runtime[id] = { queue: res.queue }
+    runtime[id] = { queue: res.queue, state: res.state ?? prevState }
     nodeStats[id] = {
       load: res.load,
       processedRps: Object.values(res.served).reduce((s, p) => s + p.count, 0) * TICKS_PER_SEC,

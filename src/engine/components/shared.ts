@@ -1,4 +1,4 @@
-import type { Capability, Chapter, ComponentKind, Flows, NodeConfig, SettingId, SimNode, Stage, Tier } from '../types'
+import type { Capability, Chapter, ComponentKind, Flows, NodeConfig, SettingId, SimEvent, SimNode, Stage, Tier } from '../types'
 
 export interface Tradeoff {
   solves: string
@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -49,6 +49,12 @@ export interface Served {
   dropped: Record<number, number>
   /** Requests refused on purpose (a rate limiter's 429s), per request type index. */
   rejected?: Record<number, number>
+  /** State to carry into the next tick. */
+  state?: Record<string, number>
+  /** Overrides the component's static hit rate for this tick (e.g. a cache warming up). */
+  hitRate?: number
+  /** Correctness violations this tick, by id. */
+  violations?: Record<string, number>
   load: number
   latencyMs: number
   stale: number
@@ -60,6 +66,14 @@ export interface ServeContext {
   backlog: Flows
   chapter: Chapter
   stage: Stage
+  /** Game time of this tick, in seconds. */
+  seconds: number
+  /** This node's state from the previous tick (undefined on the first). */
+  state: Record<string, number> | undefined
+  /** Events aimed at this node that fire during this tick. */
+  fired: SimEvent[]
+  /** Events aimed at this node that are in effect now (fired, and within their duration). */
+  active: SimEvent[]
 }
 
 /** What a component's placement() sees: the kinds wired into and out of it. */
@@ -95,6 +109,8 @@ export interface ComponentDef extends Tradeoff {
   edge: boolean
   /** Routes across the instances behind it (load balancer, API gateway). */
   balances: boolean
+  /** Users reach only one instance unless a router (balances) sits in front. */
+  needsRouter: boolean
   /** Has a machine-size (tier) setting that scales capacity and cost. */
   tiered: boolean
   bound: Bottleneck
@@ -135,7 +151,7 @@ export const tierSetting: ChoiceSetting<'tier'> = {
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US')
 
-type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
+type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'needsRouter' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
 
 /** Fill in the common defaults so each component file only states what's special about it. */
 export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick<ComponentDef, Defaults>>): ComponentDef {
@@ -145,6 +161,7 @@ export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick
     partial: false,
     edge: false,
     balances: false,
+    needsRouter: false,
     tiered: false,
     bound: 'compute',
     choices: [],

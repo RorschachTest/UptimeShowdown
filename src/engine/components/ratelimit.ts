@@ -33,6 +33,7 @@ export const ratelimit = defineComponent({
   serves: [],
   balances: true,
   bound: 'network',
+  needsRouter: true,
   count: {
     field: 'instances',
     label: 'Instances',

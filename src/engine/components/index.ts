@@ -36,6 +36,7 @@ export const DEFAULT_CONFIG: NodeConfig = {
   rlAlgorithm: 'token',
   rlLimit: 'medium',
   rlCounters: 'local',
+  cacheHashing: 'mod',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
