@@ -1,7 +1,7 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
 export type Capability = 'compute' | 'lookup' | 'write' | 'static'
@@ -15,6 +15,10 @@ export type RlAlgorithm = 'token' | 'leaky' | 'fixed' | 'slidingLog' | 'slidingC
 export type RlLimit = 'low' | 'medium' | 'high'
 export type RlCounters = 'local' | 'shared'
 export type CacheHashing = 'mod' | 'ring' | 'vnodes'
+/** How many replicas must answer before a read or write counts as done. */
+export type Quorum = 'one' | 'quorum' | 'all'
+export type KvCopies = 1 | 3 | 5
+export type KvConflict = 'lww' | 'vclock'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -28,6 +32,10 @@ export interface NodeConfig {
   rlLimit: RlLimit
   rlCounters: RlCounters
   cacheHashing: CacheHashing
+  kvCopies: KvCopies
+  kvWrite: Quorum
+  kvRead: Quorum
+  kvConflict: KvConflict
 }
 
 export interface SimNode {
@@ -62,6 +70,8 @@ export interface RequestType {
   abusive?: boolean
   /** Peak ÷ average request rate of one client (bursty clients get rate-limited more easily). */
   burst?: number
+  /** Share of these writes that race another write to the same key (two devices, two tabs). */
+  conflicts?: number
 }
 
 export interface TrafficPoint {
@@ -77,6 +87,8 @@ export interface SimEvent {
   kind: 'crash' | 'nodeLeave' | 'nodeJoin' | 'partition' | 'clockSkew'
   target: ComponentKind
   durationS?: number
+  /** partition: how many nodes are cut off (default 1). */
+  count?: number
 }
 
 /** Kept for older level data; every event is a SimEvent. */
@@ -212,7 +224,7 @@ export interface SimState {
 // ── Interview levels (Chapter 3 shell, reused by later problem chapters) ──
 
 /** A hidden parameter of the problem, shown as "?" until a question reveals it. */
-export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth' | 'data'
+export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth' | 'data' | 'conflicts'
 
 export interface QuestionCard {
   id: string

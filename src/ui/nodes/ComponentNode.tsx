@@ -80,9 +80,9 @@ export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
           <span className="text-ink-soft">{stats && !down ? fmtMs(stats.latencyMs) : '–'}</span>
         </div>
 
-        {stats?.hitRate !== undefined && !down && (
+        {(stats?.hitRate !== undefined || (live !== undefined && live !== value)) && !down && (
           <div className="mt-1 flex justify-between text-xs text-ink-soft">
-            <span>{Math.round(stats.hitRate * 100)}% hits</span>
+            <span>{stats?.hitRate !== undefined && `${Math.round(stats.hitRate * 100)}% hits`}</span>
             {live !== undefined && live !== value && <span className="font-semibold text-ink">{live} nodes live</span>}
           </div>
         )}

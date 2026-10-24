@@ -3,6 +3,7 @@ import { allinone } from './allinone'
 import { app } from './app'
 import { cache } from './cache'
 import { cdn } from './cdn'
+import { kvstore } from './kvstore'
 import { lb } from './lb'
 import { ratelimit } from './ratelimit'
 import { defineComponent, type ComponentDef, type CountSetting } from './shared'
@@ -24,7 +25,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -37,6 +38,10 @@ export const DEFAULT_CONFIG: NodeConfig = {
   rlLimit: 'medium',
   rlCounters: 'local',
   cacheHashing: 'mod',
+  kvCopies: 1,
+  kvWrite: 'one',
+  kvRead: 'one',
+  kvConflict: 'lww',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {

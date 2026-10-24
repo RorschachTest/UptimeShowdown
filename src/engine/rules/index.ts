@@ -69,11 +69,11 @@ export function checkDesign(graph: Graph, chapter: Chapter, stageIndex: number):
       block(`${def.label}: "${count.label}" isn't unlocked yet.`, node.id)
   }
 
-  // 4. Placement rules declared by each component.
+  // 4. Placement and settings rules declared by each component.
   for (const node of graph.nodes) {
     const parents = graph.edges.filter((e) => e.target === node.id).map((e) => graph.nodes.find((n) => n.id === e.source)!.kind)
     const children = graph.edges.filter((e) => e.source === node.id).map((e) => graph.nodes.find((n) => n.id === e.target)!.kind)
-    const problem = COMPONENTS[node.kind].placement?.({ parents, children })
+    const problem = COMPONENTS[node.kind].placement?.({ parents, children }) ?? COMPONENTS[node.kind].validate?.(node)
     if (problem) block(problem, node.id)
   }
 
