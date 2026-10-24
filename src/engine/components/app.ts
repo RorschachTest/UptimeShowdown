@@ -11,6 +11,7 @@ export const app = defineComponent({
   costPerMin: 10,
   queueTicks: 2,
   serves: ['compute', 'static'],
+  relays: false,
   tiered: true,
   choices: [tierSetting],
   needsRouter: true,

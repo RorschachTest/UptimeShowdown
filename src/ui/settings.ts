@@ -7,6 +7,7 @@ export const TYPE_COLORS: Record<string, string> = {
   static: 'var(--color-static)',
   scrape: 'var(--color-bad)',
   celeb: 'var(--color-ryw)',
+  inbound: 'var(--color-static)',
 }
 
 /** Stage index (0-based) where a setting unlocks, or null if it never does in this chapter. */
