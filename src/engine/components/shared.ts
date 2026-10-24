@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe' | 'fanoutMode'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -160,6 +160,9 @@ export const tierSetting: ChoiceSetting<'tier'> = {
     { value: 3, label: 'XL', solves: '8× capacity.', worsens: '12× the price. This is the cost knee: scale out instead.' },
   ],
 }
+
+/** Backlog a queue-fed node may hold, in ticks of its capacity (a minute). */
+export const BUFFER_TICKS = 600
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US')
 
