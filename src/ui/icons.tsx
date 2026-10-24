@@ -144,6 +144,14 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M13 16.5h7M16.5 13v7" />
     </>
   ),
+  broker: (
+    <>
+      <rect x="3" y="5" width="18" height="4" rx="1" />
+      <rect x="3" y="10" width="18" height="4" rx="1" />
+      <rect x="3" y="15" width="18" height="4" rx="1" />
+      <path d="M7 7h.01M7 12h.01M7 17h.01" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

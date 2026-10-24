@@ -1,8 +1,11 @@
+import { TICKS_PER_SEC } from '../flows'
 import { serveGeneric } from '../serve'
 import { defineComponent } from './shared'
 
 /** Aggregating a 1-in-10 sample does a tenth of the work per message. */
 const SAMPLE_SPEEDUP = 10
+/** Seconds of messages a consumer has fetched but not finished when it dies. */
+const IN_FLIGHT_S = 2
 
 /** Background workers: consume from a queue, so they never need a load balancer. */
 export const worker = defineComponent({
@@ -40,6 +43,11 @@ export const worker = defineComponent({
   serve: (node, ctx) => {
     // Jobs cost their workCost here (a transcode is heavier than a notification).
     const chapter = { ...ctx.chapter, requestTypes: ctx.chapter.requestTypes.map((rt) => ({ ...rt, weight: rt.workCost ?? rt.weight })) }
-    return serveGeneric(node, { ...ctx, chapter, instances: ctx.instances * (node.config.workSample === 'tenth' ? SAMPLE_SPEEDUP : 1) })
+    const res = serveGeneric(node, { ...ctx, chapter, instances: ctx.instances * (node.config.workSample === 'tenth' ? SAMPLE_SPEEDUP : 1) })
+    // A consumer that crashes mid-batch: committed-before-processing loses the batch, committed-after replays it.
+    const broker = ctx.parents.find((p) => p.kind === 'broker')
+    if (!broker || !ctx.fired.some((e) => e.kind === 'crash')) return res
+    const inFlight = (Object.values(ctx.inflow).reduce((s, p) => s + p.count, 0) * TICKS_PER_SEC * IN_FLIGHT_S) / Math.max(node.instances, 1)
+    return { ...res, violations: broker.config.brokerCommit === 'before' ? { lostMessages: inFlight } : { processedTwice: inFlight } }
   },
 })
