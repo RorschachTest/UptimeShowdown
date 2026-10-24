@@ -8,6 +8,7 @@ export const TYPE_COLORS: Record<string, string> = {
   scrape: 'var(--color-bad)',
   celeb: 'var(--color-ryw)',
   inbound: 'var(--color-static)',
+  job: 'var(--color-ryw)',
 }
 
 /** Stage index (0-based) where a setting unlocks, or null if it never does in this chapter. */

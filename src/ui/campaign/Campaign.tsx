@@ -40,6 +40,9 @@ function ChapterCard({ entry }: { entry: ChapterEntry }) {
 export function Campaign() {
   const progress = useGameStore((s) => s.progress)
   const earned = CHAPTERS.reduce((s, c) => s + (progress[c.id]?.stars ?? 0), 0)
+  // A chapter counts once its lesson is learned and its hands-on has at least one star.
+  const done = CHAPTERS.filter((c) => progress[c.id]?.learned && (progress[c.id]?.stars ?? 0) > 0).length
+  const complete = done === CHAPTERS.length
   return (
     <div className="flex-1 overflow-y-auto bg-board p-6">
       <div className="mx-auto max-w-6xl">
@@ -50,10 +53,26 @@ export function Campaign() {
               Learn a system-design idea, then build it and watch real traffic hit it. Every chapter is a lesson and a hands-on.
             </p>
           </div>
-          <p className="text-sm font-semibold">
-            {earned} of {CHAPTERS.length * 3} stars
-          </p>
+          <div className="text-right text-sm">
+            <p className="font-semibold">
+              {earned} of {CHAPTERS.length * 3} stars
+            </p>
+            <p className="text-ink-soft">
+              {done} of {CHAPTERS.length} chapters complete
+            </p>
+            <div className="mt-1 h-2 w-48 overflow-hidden rounded-full bg-piece" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={CHAPTERS.length} aria-label="Chapters complete">
+              <div className="h-full rounded-full bg-ok" style={{ width: `${(done / CHAPTERS.length) * 100}%` }} />
+            </div>
+          </div>
         </header>
+        {complete && (
+          <section className="piece mt-6 bg-ok/15 px-5 py-4" aria-label="Single player complete">
+            <h2 className="text-xl font-extrabold">Single player complete</h2>
+            <p className="mt-1 text-sm">
+              Every chapter learned and played: {earned} of {CHAPTERS.length * 3} stars. Go back for three stars everywhere, or take the grand tour again with a leaner design.
+            </p>
+          </section>
+        )}
         {([1, 2] as const).map((vol) => {
           const chapters = CHAPTERS.filter((c) => c.volume === vol)
           if (chapters.length === 0) return null
