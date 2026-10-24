@@ -69,6 +69,14 @@ export const chapter8: InterviewLevel = {
     { id: 'expiry', text: 'Expiring links', core: false },
     { id: 'qr', text: 'QR codes', core: false },
   ],
+  brief: {
+    points: [
+      'People paste a long URL and get a short link back, like sho.rt/aZ3kQ9x.',
+      'Anyone who opens a short link is redirected to the long URL, and links are shared everywhere: posters, chats, tweets.',
+      'You have web servers, a cache, a database and an ID generator to work with.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['web', 'app'], ['c', 'cache'], ['g', 'idgen'], ['db', 'sqldb']], wires: ['u>lb', 'lb>web', 'web>c', 'c>db', 'web>g', 'g>db'] },
+  },
   wrapUp: [
     {
       id: 'redirect',

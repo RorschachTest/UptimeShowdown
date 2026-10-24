@@ -45,6 +45,16 @@ describe('campaign', () => {
         }
       })
 
+      it('illustrates its lesson', () => {
+        const pictures = entry.lesson.cards.filter((c) => c.visual || c.diagram).length
+        expect(pictures).toBeGreaterThanOrEqual(entry.id === 'v1-03' ? 1 : 2)
+        for (const c of entry.lesson.cards) {
+          const v = c.visual
+          if (v?.kind === 'bits' || v?.kind === 'bars' || v?.kind === 'steps' || v?.kind === 'versus') expect(v.caption.length, c.title).toBeGreaterThan(10)
+          if (v?.kind === 'bars') for (const r of v.rows) expect(r.value, `${c.title}: ${r.label}`).toBeGreaterThan(0)
+        }
+      })
+
       const play = entry.play
       if (play.kind === 'ladder') it('has valid stage data', () => checkBoardChapter(play.chapter))
       if (play.kind === 'interview')

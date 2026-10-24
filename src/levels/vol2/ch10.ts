@@ -14,6 +14,7 @@ export const v2ch10: ChapterEntry = {
       {
         title: 'Why SQL struggles',
         body: 'A rank in SQL means ORDER BY score over every player, or counting everyone above you. Fine for thousands of players; for millions, every view sorts the world.',
+        visual: { kind: 'bars', caption: 'Work to find one player’s rank among 25 million.', unit: 'steps', rows: [{ label: 'SQL ORDER BY', value: 25000000, hue: 'red', note: 'count or sort everyone above you' }, { label: 'Sorted set', value: 25, hue: 'green', note: 'about log₂(25M) skip-list hops' }] },
         solves: 'Familiar, durable, easy to start.',
         worsens: 'Each rank query scans millions of rows.',
       },
@@ -33,12 +34,14 @@ export const v2ch10: ChapterEntry = {
       {
         title: 'Shard by score range',
         body: 'When one box can’t hold everyone, split by score: shard 1 holds the top scores, shard 2 the next band, and so on. Top 10 reads only shard 1; a player’s rank is their rank in their shard plus the sizes of the shards above.',
+        visual: { kind: 'steps', caption: 'A player’s global rank from score-range shards.', steps: [{ title: 'Top shard', text: 'scores 900+: 1,000 players', hue: 'purple' }, { title: 'Middle shard', text: 'scores 500–899: 4M players', hue: 'blue' }, { title: 'You', text: '#12,000 inside the middle shard', hue: 'orange' }, { title: 'Global rank', text: '1,000 + 12,000 = #13,000', hue: 'green' }] },
         solves: 'Top-10 and rank stay cheap as you add shards.',
         worsens: 'Low-score shards are crowded, and players move shards as they climb.',
       },
       {
         title: 'Why not hash shards',
         body: 'Hashing players spreads them evenly, but then the top 10 could be on any shard: every view must ask all shards and merge (scatter-gather). The cost of a read grows with the number of shards.',
+        visual: { kind: 'versus', caption: 'How shards are split decides what a read costs.', sides: [{ title: 'By player hash', hue: 'red', good: ['Even writes'], bad: ['Top 10 asks every shard', 'Every rank asks every shard'] }, { title: 'By score range', hue: 'green', good: ['Top 10 reads one shard', 'Rank = one shard + counts above'], bad: ['Low-score shards are crowded'] }] },
         solves: 'Perfectly even writes.',
         worsens: 'Every read hits every shard.',
       },

@@ -24,18 +24,21 @@ export const v2ch01: ChapterEntry = {
       {
         title: 'Why not a 2D range query',
         body: 'Filtering latitude between a and b and longitude between c and d makes the database intersect two huge sets on every search. It works for a demo and falls over at scale.',
+        visual: { kind: 'steps', caption: 'Two indexes can’t answer one 2D question cheaply.', steps: [{ title: 'lat BETWEEN …', text: 'a long strip around the world', hue: 'blue' }, { title: 'lng BETWEEN …', text: 'another long strip', hue: 'orange' }, { title: 'Intersect', text: 'millions of rows compared to find a few hundred', hue: 'red' }] },
         solves: 'No index to build.',
         worsens: 'Slow and expensive per search.',
       },
       {
         title: 'Grids and geohash',
         body: 'Divide the map into cells and search the user’s cell. An even grid overloads city cells. Geohash encodes cells as strings: each extra character makes a smaller cell, and nearby places share a prefix.',
+        visual: { kind: 'bars', caption: 'Geohash cell width by length: pick the length from the search radius, then add the 8 neighbours.', unit: 'km', rows: [{ label: '4 characters', value: 39, hue: 'blue' }, { label: '5 characters', value: 4.9, hue: 'teal' }, { label: '6 characters', value: 1.2, hue: 'green' }, { label: '7 characters', value: 0.15, hue: 'purple' }] },
         solves: 'A search becomes a lookup of a few cell keys.',
         worsens: 'Places just across a cell edge have a different prefix: also search the 8 neighbouring cells.',
       },
       {
         title: 'Quadtree',
         body: 'Split the map into four, and keep splitting any square with too many places. Dense cities get small squares, empty areas stay big, so every leaf holds about the same number of places.',
+        visual: { kind: 'steps', caption: 'Split only where it’s crowded.', steps: [{ title: 'Whole map', text: '200M places: too many', hue: 'red' }, { title: 'Split in 4', text: 'oceans stay big', hue: 'orange' }, { title: 'Keep splitting', text: 'until each square has ≤ 100 places', hue: 'blue' }, { title: 'Search', text: 'walk to your square, read its neighbours', hue: 'green' }] },
         solves: 'Even load whatever the density.',
         worsens: 'Built in memory: a restarted server needs minutes to rebuild before it can serve.',
       },

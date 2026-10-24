@@ -24,24 +24,28 @@ export const v1ch08: ChapterEntry = {
       {
         title: '301 or 302',
         body: 'A 301 (permanent) lets browsers remember the target and skip you next time: less load. A 302 (temporary) sends every click through you: more load, but you can count clicks.',
+        visual: { kind: 'versus', caption: 'The status code decides whether the browser comes back to you next time.', sides: [{ title: '301 Moved Permanently', hue: 'teal', good: ['Browser caches it: repeat clicks never reach you', 'Less load'], bad: ['You can’t count those clicks'] }, { title: '302 Found', hue: 'orange', good: ['Every click passes through you', 'Click analytics work'], bad: ['Every click costs you a request'] }] },
         solves: '301 cuts load; 302 enables analytics.',
         worsens: '301 hides clicks; 302 costs capacity.',
       },
       {
         title: 'Hash and fix collisions',
         body: 'Hash the long URL (e.g. CRC32 or MD5) and keep the first 7 characters. Different URLs can collide, so check the database and re-hash with a salt until the code is free.',
+        visual: { kind: 'steps', caption: 'Short hashes collide, so every write must check first.', steps: [{ title: 'Hash', text: 'CRC32(long URL) → take 7 chars', hue: 'blue' }, { title: 'Look up', text: 'is that code already taken?', hue: 'purple' }, { title: 'Taken?', text: 'add a salt and hash again', hue: 'red' }, { title: 'Free', text: 'store code → URL', hue: 'green' }] },
         solves: 'No ID service needed; the same URL can map to the same code.',
         worsens: 'An extra database read on every write, and collisions grow with the table.',
       },
       {
         title: 'Base62 of a unique ID',
         body: 'Ask an ID generator for a unique number and write it in base 62 (0-9, a-z, A-Z). Seven characters cover 62^7 ≈ 3.5 trillion codes, and there are no collisions by construction.',
+        visual: { kind: 'steps', caption: 'Base62 is just another way to write the number, so unique IDs give unique codes.', steps: [{ title: 'Get an ID', text: '2,009,215,674,938 from the ID generator', hue: 'green' }, { title: 'Divide by 62', text: 'keep the remainders, again and again', hue: 'blue' }, { title: 'Map digits', text: '0–9, a–z, A–Z', hue: 'purple' }, { title: 'Short code', text: 'zn9edcu', hue: 'orange' }] },
         solves: 'No collisions, no extra lookups.',
         worsens: 'Depends on a unique ID generator; codes are guessable in sequence.',
       },
       {
         title: 'Cache the hot links',
         body: 'Most clicks go to a small set of popular links. A cache in front of the database answers them in a millisecond and keeps a viral link from flattening the database.',
+        visual: { kind: 'bars', caption: 'Database reads per second for 3,800 redirects a second.', unit: 'reads/s', rows: [{ label: 'No cache', value: 3800, hue: 'red', note: 'one database read per click' }, { label: '95% cache hits', value: 190, hue: 'green', note: 'only the misses reach the database' }] },
         solves: 'Redirects stay fast and the database stays calm.',
         worsens: 'More memory to pay for.',
       },

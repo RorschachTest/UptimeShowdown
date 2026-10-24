@@ -75,6 +75,15 @@ export const chapter7: InterviewLevel = {
     { id: 'random', text: 'Unguessable IDs', core: false },
     { id: 'reuse', text: 'Reuse IDs of deleted orders', core: false },
   ],
+  brief: {
+    points: [
+      'Our shop runs its order service on many machines. Every new order needs an ID that no other order will ever have.',
+      'Today a single database auto-increment column hands out the numbers, and it has become the bottleneck.',
+      'Other systems store these IDs and sort by them, so their shape matters as much as their uniqueness.',
+      'You choose how IDs are generated and how many ID servers to run.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['g', 'idgen']], wires: ['u>g'] },
+  },
   wrapUp: [
     {
       id: 'bits',

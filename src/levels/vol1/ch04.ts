@@ -21,16 +21,19 @@ export const v1ch04: ChapterEntry = {
       {
         title: 'Token bucket and leaking bucket',
         body: 'A token bucket refills at the limit and lets a client spend saved tokens in a burst. A leaking bucket queues requests and lets them out at a steady rate, smoothing bursts at the cost of waiting.',
+        visual: { kind: 'versus', caption: 'Both cap the average rate; they treat bursts differently.', sides: [{ title: 'Token bucket', hue: 'green', good: ['Tokens refill at the limit', 'A quiet client saves tokens for a burst'], bad: ['Bursts reach your servers'] }, { title: 'Leaking bucket', hue: 'blue', good: ['A queue drains at a fixed rate', 'Perfectly smooth outflow'], bad: ['Bursts wait in line: added latency'] }] },
         solves: 'Token bucket suits bursty real users; leaking bucket gives a steady outflow.',
         worsens: 'Leaking bucket adds latency; both need tuning per client.',
       },
       {
         title: 'Counting windows',
         body: 'A fixed window counts per clock minute but lets up to 2× through at the edge of two windows. A sliding log is exact but stores a timestamp per request. A sliding counter blends two windows: nearly exact and cheap.',
+        visual: { kind: 'versus', caption: 'Three ways to count requests per minute.', sides: [{ title: 'Fixed window', hue: 'orange', good: ['One counter per minute'], bad: ['Up to 2× at a window edge'] }, { title: 'Sliding log', hue: 'purple', good: ['Exact'], bad: ['A timestamp per request: memory'] }, { title: 'Sliding counter', hue: 'green', good: ['Nearly exact', 'Two counters'], bad: ['An approximation'] }] },
       },
       {
         title: 'Many limiters, one count',
         body: 'At scale the limiter runs on several servers. If each keeps its own counts, a client gets the limit once per server. Keep counters in a shared store with atomic increments so the limit means what it says.',
+        visual: { kind: 'bars', caption: 'What a scraper really gets with a limit of 10/s on each of 3 limiters.', unit: 'req/s', rows: [{ label: 'Local counters', value: 30, hue: 'red', note: 'each limiter counts only what it sees' }, { label: 'Shared counter', value: 10, hue: 'green', note: 'one atomic count in a shared store' }] },
         solves: 'One true limit across every limiter.',
         worsens: 'An extra hop (about a millisecond) and a store to run.',
         diagram: { nodes: [['u', 'traffic'], ['lb', 'lb'], ['rl', 'ratelimit'], ['web', 'app']], wires: ['u>lb', 'lb>rl', 'rl>web'] },

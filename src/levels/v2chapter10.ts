@@ -64,6 +64,14 @@ export const v2chapter10: InterviewLevel = {
     { id: 'friends', text: 'Friends-only leaderboard', core: false },
     { id: 'regions', text: 'Per-country boards', core: false },
   ],
+  brief: {
+    points: [
+      'A mobile game with seasons. Players win matches and their score goes up.',
+      'Everyone can see the top 10 and their own rank, and checks it right after every match.',
+      'Game servers send score updates; the app asks for the leaderboard.',
+    ],
+    diagram: { nodes: [['u', 'traffic'], ['b', 'leaderboard']], wires: ['u>b'] },
+  },
   wrapUp: [
     {
       id: 'zset',

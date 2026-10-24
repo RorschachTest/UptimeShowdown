@@ -14,6 +14,7 @@ export const v1ch03: ChapterEntry = {
       {
         title: '1. Scope before you draw',
         body: 'A vague prompt hides the numbers that shape the design. Ask the few questions that change the architecture: who uses it, how much traffic, what is read vs written, how fresh data must be, what happens when things fail.',
+        visual: { kind: 'steps', caption: 'The four steps of a design interview, and what each produces.', steps: [{ title: 'Scope', text: 'questions → facts and a feature list', hue: 'blue' }, { title: 'Propose', text: 'a high-level design, agreed', hue: 'orange' }, { title: 'Deep dive', text: 'the hard parts, under a curveball', hue: 'purple' }, { title: 'Wrap up', text: 'bottlenecks and what’s next', hue: 'green' }] },
         solves: 'You design for the real problem, not a remembered one.',
         worsens: 'Time: you only get a few questions, so choose them well.',
       },
