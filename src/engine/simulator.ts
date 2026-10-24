@@ -41,6 +41,7 @@ interface Topology {
   outEdges: Record<string, SimEdge[]>
   lbFed: Record<string, boolean>
   buffered: Record<string, boolean>
+  inEdges: Record<string, SimEdge[]>
   reach: Record<string, boolean[][]>
 }
 
@@ -51,6 +52,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
   const outEdges: Record<string, SimEdge[]> = {}
   const lbFed: Record<string, boolean> = {}
   const buffered: Record<string, boolean> = {}
+  const inEdges: Record<string, SimEdge[]> = {}
   for (const n of graph.nodes) {
     indegree[n.id] = 0
     outEdges[n.id] = []
@@ -59,6 +61,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
     const src = byId.get(e.source)
     if (!src || !byId.has(e.target) || e.source === e.target) continue
     outEdges[e.source]!.push(e)
+    ;(inEdges[e.target] ??= []).push(e)
     indegree[e.target]! += 1
     if (COMPONENTS[src.kind].balances) lbFed[e.target] = true
     if (COMPONENTS[src.kind].buffers) buffered[e.target] = true
@@ -90,7 +93,7 @@ function topology(graph: Graph, chapter: Chapter): Topology {
       }),
     )
   }
-  return { order, outEdges, lbFed, buffered, reach }
+  return { order, outEdges, lbFed, buffered, inEdges, reach }
 }
 
 export function initSim(graph: Graph, chapter: Chapter, stageIndex: number): SimState {
@@ -257,6 +260,7 @@ export function step(state: SimState): SimState {
       fired: fired[id] ?? [],
       active: active[id] ?? [],
       buffered: !!state.buffered[id],
+      parents: (state.inEdges[id] ?? []).map((e) => nodesById.get(e.source)!),
     }
     const res = spec.serve ? spec.serve(node, ctx) : serveGeneric(node, ctx)
     // Drops are reported per type; split them between user-facing and background flows by what arrived.

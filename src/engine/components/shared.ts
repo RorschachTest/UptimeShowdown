@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe' | 'fanoutMode'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe' | 'fanoutMode' | 'crawlPolite' | 'crawlRobots' | 'crawlDepth' | 'dlDns' | 'dlDedupe'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -76,6 +76,8 @@ export interface ServeContext {
   active: SimEvent[]
   /** Fed by a queue: work can wait in it instead of being dropped. */
   buffered: boolean
+  /** The pieces wired directly into this one (their settings can shape how it works). */
+  parents: SimNode[]
 }
 
 /** What a component's placement() sees: the kinds wired into and out of it. */

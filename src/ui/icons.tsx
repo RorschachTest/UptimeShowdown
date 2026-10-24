@@ -91,6 +91,18 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 18h16" />
     </>
   ),
+  frontier: (
+    <>
+      <path d="M4 6h16M4 12h10M4 18h6" />
+      <path d="M17 15l3 3-3 3" />
+    </>
+  ),
+  downloader: (
+    <>
+      <path d="M12 4v11m-4-4 4 4 4-4" />
+      <path d="M5 20h14" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

@@ -1,7 +1,7 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
 export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed'
@@ -53,6 +53,11 @@ export interface NodeConfig {
   providerRetry: ProviderRetry
   providerDedupe: boolean
   fanoutMode: FanoutMode
+  crawlPolite: boolean
+  crawlRobots: boolean
+  crawlDepth: boolean
+  dlDns: boolean
+  dlDedupe: boolean
 }
 
 export interface SimNode {
@@ -237,6 +242,7 @@ export interface SimState {
   lbFed: Record<string, boolean>
   /** Nodes fed by a buffering piece (a queue): they can hold a long backlog. */
   buffered: Record<string, boolean>
+  inEdges: Record<string, SimEdge[]>
   /** reach[nodeId][typeIndex][step]: can this node complete that request from that step? */
   reach: Record<string, boolean[][]>
   runtime: Record<string, NodeRuntime>
