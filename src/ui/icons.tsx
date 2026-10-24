@@ -130,6 +130,12 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M8.5 12h3M11.5 12l6-6M11.5 12l6 6M11.5 12h7" />
     </>
   ),
+  blob: (
+    <>
+      <path d="M4 7l8-4 8 4-8 4-8-4Z" />
+      <path d="M4 7v10l8 4 8-4V7M12 11v10" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />
