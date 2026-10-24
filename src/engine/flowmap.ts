@@ -21,6 +21,7 @@ const DOES: Record<Capability, string> = {
   blob: 'stores the bytes',
   chunk: 'splits files into blocks',
   aggregate: 'counts per key per minute',
+  match: 'matches buy and sell orders',
 }
 
 export interface PieceFlow {

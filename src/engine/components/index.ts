@@ -16,6 +16,7 @@ import { kvstore } from './kvstore'
 import { lb } from './lb'
 import { leaderboard } from './leaderboard'
 import { provider } from './provider'
+import { matcher } from './matcher'
 import { pubsub } from './pubsub'
 import { queue } from './queue'
 import { ratelimit } from './ratelimit'
@@ -43,7 +44,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker, aggregator, wallet }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie, tsdb, wsgateway, pubsub, blob, blocksrv, broker, aggregator, wallet, matcher }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -97,6 +98,9 @@ export const DEFAULT_CONFIG: NodeConfig = {
   dbConcurrency: 'none',
   appIdempotent: false,
   walletTx: 'none',
+  matchState: 'database',
+  matchOrder: 'arrival',
+  matchStandby: false,
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {
