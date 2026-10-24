@@ -20,6 +20,7 @@ const DOES: Record<Capability, string> = {
   publish: 'publishes to subscribers',
   blob: 'stores the bytes',
   chunk: 'splits files into blocks',
+  aggregate: 'counts per key per minute',
 }
 
 export interface PieceFlow {
