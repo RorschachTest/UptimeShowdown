@@ -1,6 +1,4 @@
-import { changedPieces, interviewReport, scopeScore } from '../../engine/interview'
 import { useGameStore } from '../../store'
-import { toSimGraph } from '../graph'
 
 function Card({ title, children, label }: { title: string; label: string; children: React.ReactNode }) {
   return (
@@ -18,9 +16,24 @@ const primary = 'piece bg-ink px-3 py-1.5 text-sm font-bold text-piece active:tr
 
 function Review() {
   const notes = useGameStore((s) => s.interview!.review!)
+  const allIssues = useGameStore((s) => s.issues)
+  const issues = allIssues.filter((i) => i.severity === 'block')
   const { closeReview, startRun } = useGameStore.getState()
   return (
     <Card title="The interviewer looks at your design" label="Interviewer review">
+      {issues.length > 0 && (
+        <section className="mt-3 rounded-lg border-2 border-bad px-3 py-2" aria-label="Must fix">
+          <h3 className="text-sm font-bold text-bad">Must fix before it can run</h3>
+          <ul className="mt-1 flex flex-col gap-1 text-sm">
+            {issues.map((i) => (
+              <li key={i.text} className="flex gap-2">
+                <span className="text-bad" aria-hidden="true">✗</span>
+                <span>{i.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ul className="mt-3 flex flex-col gap-2 text-sm">
         {notes.map((n) => (
           <li key={n.text} className="flex gap-2">
@@ -35,7 +48,7 @@ function Review() {
         <button type="button" onClick={closeReview} className={btn}>
           Revise design
         </button>
-        <button type="button" onClick={startRun} className={primary}>
+        <button type="button" onClick={startRun} disabled={issues.length > 0} className={`${primary} disabled:opacity-40`}>
           Run it
         </button>
       </div>
@@ -87,21 +100,9 @@ function WrapUp() {
 }
 
 function ReportCard() {
-  const iv = useGameStore((s) => s.interview!)
-  const nodes = useGameStore((s) => s.nodes)
-  const edges = useGameStore((s) => s.edges)
-  const levelId = useGameStore((s) => s.levelId)
-  const openLevel = useGameStore((s) => s.openLevel)
-  const graph = toSimGraph(nodes, edges)
-  const report = interviewReport({
-    scope: scopeScore(iv.level, iv.asked, iv.inScope),
-    run: iv.runResult!,
-    deep: iv.deepResult!,
-    changes: iv.snapshot ? changedPieces(iv.snapshot, graph) : 0,
-    editBudget: iv.level.editBudget,
-    wrapUpCorrect: iv.wrapQuestions.filter((q) => q.options.find((o) => o.id === iv.answers[q.id])?.correct).length,
-    wrapUpTotal: iv.wrapQuestions.length,
-  })
+  const report = useGameStore((s) => s.interview!.report!)
+  const chapterId = useGameStore((s) => s.chapterId)
+  const { openChapter, setView } = useGameStore.getState()
   return (
     <Card title="Report card" label="Report card">
       <p className="mt-1 text-3xl tracking-wider text-warn" aria-label={`${report.stars} of 3 stars`}>
@@ -120,10 +121,10 @@ function ReportCard() {
         ))}
       </ul>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={() => openLevel('ch1')} className={btn}>
-          Back to Chapter 1
+        <button type="button" onClick={() => setView('campaign')} className={btn}>
+          All chapters
         </button>
-        <button type="button" onClick={() => openLevel(levelId)} className={primary}>
+        <button type="button" onClick={() => openChapter(chapterId, 'play')} className={primary}>
           Try again
         </button>
       </div>
@@ -135,8 +136,9 @@ function ReportCard() {
 export function InterviewOverlay() {
   const phase = useGameStore((s) => s.interview?.phase)
   const reviewing = useGameStore((s) => s.interview?.review != null)
+  const hasReport = useGameStore((s) => s.interview?.report != null)
   if (reviewing) return <Review />
   if (phase === 'wrapup') return <WrapUp />
-  if (phase === 'done') return <ReportCard />
+  if (phase === 'done' && hasReport) return <ReportCard />
   return null
 }

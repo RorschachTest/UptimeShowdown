@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { isBlocked } from '../engine/rules'
 import { diagnose, graphCostPerMin, summarize, type Bottleneck } from '../engine/scoring'
 import { currentStage, TICKS_PER_SEC } from '../engine/simulator'
-import { LEVELS } from '../levels'
+import { chapterById } from '../levels'
 import { useGameStore, type Speed } from '../store'
 import { fmtClock, fmtInt, fmtMs, fmtPct } from './format'
 
@@ -25,12 +26,13 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'ok
 }
 
 export function HUD() {
-  const { sim, running, speed, setRunning, setSpeed, reset, levelId, openLevel, canPlay } = useGameStore(
+  const { sim, running, speed, setRunning, setSpeed, reset, chapterId, view, setView, canPlay } = useGameStore(
     useShallow((s) => ({
-      levelId: s.levelId,
-      openLevel: s.openLevel,
+      chapterId: s.chapterId,
+      view: s.view,
+      setView: s.setView,
       // Interviews only run from the review ("Run it") and during the deep dive.
-      canPlay: !s.result && (!s.interview || s.interview.phase === 'deepdive' || (s.interview.phase === 'run' && !s.interview.runResult)),
+      canPlay: !s.result && !isBlocked(s.issues) && (!s.interview || s.interview.phase === 'deepdive' || (s.interview.phase === 'run' && !s.interview.runResult)),
       sim: s.sim,
       running: s.running,
       speed: s.speed,
@@ -48,30 +50,37 @@ export function HUD() {
   const finished = metrics.successRps + metrics.errorRps > 0
   const showStale = (stage.mix.ryw ?? 0) > 0
   const showBots = sim.chapter.requestTypes.some((rt) => rt.abusive && (stage.mix[rt.id] ?? 0) > 0)
-  // Chapter 2 has no board: only the title and chapter picker apply.
+  // Only a board being played shows the simulation readouts and controls.
   const estimating = useGameStore((s) => s.estimate !== null)
+  const boardless = view !== 'play' || estimating
+  const entry = chapterById(chapterId)
 
   return (
     <header className="flex flex-wrap items-center gap-x-7 gap-y-3 border-b-2 border-ink bg-panel px-5 py-3">
       <div className="mr-auto flex items-center gap-3">
         <h1 className="text-xl leading-tight font-extrabold tracking-tight">Uptime Showdown</h1>
-        <div className="flex overflow-hidden rounded-lg border-2 border-ink" role="group" aria-label="Chapter">
-          {LEVELS.map((l) => (
+        <button type="button" onClick={() => setView('campaign')} className="rounded-lg border-2 border-ink px-2.5 py-1 text-sm font-semibold hover:bg-board">
+          ← Chapters
+        </button>
+        <span className="text-sm font-semibold">
+          {entry.volume === 1 ? 'Vol 1' : 'Vol 2'} · {entry.number}. {entry.title}
+        </span>
+        <div className="flex overflow-hidden rounded-lg border-2 border-ink" role="group" aria-label="Step">
+          {(['lesson', 'play'] as const).map((v) => (
             <button
-              key={l.id}
+              key={v}
               type="button"
-              aria-pressed={levelId === l.id}
-              title={l.title}
-              onClick={() => levelId !== l.id && openLevel(l.id)}
-              className={`px-2.5 py-1 text-sm font-semibold ${levelId === l.id ? 'bg-ink text-piece' : 'bg-piece hover:bg-board'}`}
+              aria-pressed={view === v}
+              onClick={() => view !== v && setView(v)}
+              className={`px-2.5 py-1 text-sm font-semibold ${view === v ? 'bg-ink text-piece' : 'bg-piece hover:bg-board'}`}
             >
-              {l.short}
+              {v === 'lesson' ? 'Learn' : 'Play'}
             </button>
           ))}
         </div>
       </div>
 
-      {!estimating && (
+      {!boardless && (
         <>
       <div className="flex items-center gap-5" aria-live="polite">
         <Stat label="Traffic" value={`${fmtInt(metrics.rps)} rps`} />
@@ -143,7 +152,7 @@ export function HUD() {
           disabled={!canPlay && !running}
           className="piece w-24 bg-ink py-1.5 font-bold text-piece active:translate-x-px active:translate-y-px disabled:opacity-40"
         >
-          {running ? 'Pause' : !canPlay && started ? 'Finished' : started ? 'Resume' : 'Play'}
+          {running ? 'Pause' : !canPlay && started ? 'Finished' : started ? 'Resume' : 'Run'}
         </button>
         <div className="flex overflow-hidden rounded-lg border-2 border-ink" role="group" aria-label="Speed">
           {SPEEDS.map((s) => (

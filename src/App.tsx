@@ -1,10 +1,12 @@
 import { ReactFlowProvider } from '@xyflow/react'
+import { Campaign } from './ui/campaign/Campaign'
 import { Canvas } from './ui/Canvas'
 import { EstimateDesk } from './ui/estimate/EstimateDesk'
 import { HUD } from './ui/HUD'
 import { Inspector } from './ui/Inspector'
 import { InterviewBar } from './ui/interview/InterviewBar'
 import { InterviewOverlay } from './ui/interview/Overlays'
+import { LessonView } from './ui/lesson/LessonView'
 import { ScopePanel } from './ui/interview/ScopePanel'
 import { Palette } from './ui/Palette'
 import { StageBanner } from './ui/StageBanner'
@@ -16,6 +18,15 @@ export default function App() {
   const interview = useGameStore((s) => s.interview !== null)
   const scoping = useGameStore((s) => s.interview?.phase === 'scope')
   const estimating = useGameStore((s) => s.estimate !== null)
+  const view = useGameStore((s) => s.view)
+  if (view === 'campaign') return <Campaign />
+  if (view === 'lesson')
+    return (
+      <div className="flex h-full flex-col">
+        <HUD />
+        <LessonView />
+      </div>
+    )
   if (estimating)
     return (
       <div className="flex h-full flex-col">

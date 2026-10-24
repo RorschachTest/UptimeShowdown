@@ -5,6 +5,7 @@ import { initSim, TICKS_PER_SEC } from '../engine/simulator'
 import { graph, run, type N } from '../engine/test-helpers'
 import type { NodeConfig } from '../engine/types'
 import { chapter4 } from './chapter4'
+import { blockers } from './test-suite'
 
 const ch = chapter4.chapter
 const through = { writeStrategy: 'through' } as const
@@ -94,3 +95,26 @@ describe('Chapter 4 curveball', () => {
     expect(reviewDesign(s, chapter4, []).map((n) => n.text).join('\n')).toMatch(/each keep their own counts/)
   })
 })
+
+describe('Chapter 4 rules', () => {
+  const toGraphArgs = (g: ReturnType<typeof graph>): [N[], string[]] => [
+    g.nodes.map((n) => [n.id, n.kind, n.instances, n.config] as N),
+    g.edges.map((e) => e.id),
+  ]
+
+  it('the reference designs are legal', () => {
+    expect(blockers(ch, 0, ...toGraphArgs(limited(reference)))).toEqual([])
+    expect(blockers(ch, 1, ...toGraphArgs(limited({ rlAlgorithm: 'token', rlLimit: 'low', rlCounters: 'shared' }, 4, true)))).toEqual([])
+  })
+
+  it('blocks a design with no rate limiter', () => {
+    const [n, w] = [[['u', 'traffic'], ['lb', 'lb'], ...backend] as N[], ['u>lb', 'lb>web', ...backendWires]]
+    expect(blockers(ch, 0, n, w).join(' ')).toMatch(/needs a rate limiter/)
+  })
+
+  it('blocks a side wire that lets traffic bypass the limiter', () => {
+    const [n, w] = toGraphArgs(limited(reference))
+    expect(blockers(ch, 0, n, [...w, 'u>web']).join(' ')).toMatch(/must go through the rate limiter\. Right now .* can go around it/)
+  })
+})
+

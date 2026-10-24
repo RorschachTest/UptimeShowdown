@@ -18,6 +18,8 @@ export function StageBanner() {
   const best = useGameStore((s) => s.best)
   const result = useGameStore((s) => s.result)
   const reach = useGameStore((s) => s.sim.reach.traffic)
+  const blocker = useGameStore((s) => s.issues.find((i) => i.severity === 'block'))
+  const edited = useGameStore((s) => s.runEdited && !s.result)
   const { goToStage, reset } = useGameStore.getState()
   const stage = chapter.stages[stageIndex]!
   // A stage is open once the previous one earned at least a star.
@@ -53,6 +55,8 @@ export function StageBanner() {
         <p className="mt-1 text-xs text-ink-soft">
           Goals: uptime ≥ {fmtPct(stage.goals.uptime)}, p95 ≤ {fmtMs(stage.goals.p95Ms)}, budget {stage.budget}/min.
         </p>
+        {blocker && <p className="mt-1 text-xs font-semibold text-bad">Can’t run yet: {blocker.text}</p>}
+        {edited && !blocker && <p className="mt-1 text-xs font-semibold text-warn">You changed the design mid-run: this run won’t earn stars. Reset to run it cleanly.</p>}
       </div>
 
       <ul className="flex flex-wrap gap-1.5 self-center" aria-label="Request types">

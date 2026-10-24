@@ -11,17 +11,12 @@ export interface ReviewNote {
   text: string
 }
 
-/** The interviewer's read of a proposed design, before it runs. Advisory, never blocking. */
+/** The interviewer's read of a proposed design, before it runs. Advisory; hard rules live in rules/. */
 export function reviewDesign(state: SimState, level: InterviewLevel, asked: string[]): ReviewNote[] {
   const stage = state.chapter.stages[0]!
   const facts = revealedFacts(level, asked)
   const notes: ReviewNote[] = []
   const warn = (text: string) => notes.push({ tone: 'warn', text })
-
-  const users = state.graph.nodes.find((n) => n.kind === 'traffic')
-  state.chapter.requestTypes.forEach((rt, t) => {
-    if ((stage.mix[rt.id] ?? 0) > 0 && users && state.reach[users.id]?.[t]?.[0] !== true) warn(`Nothing in your design can serve "${rt.label}" yet.`)
-  })
 
   for (const node of state.graph.nodes) {
     const def = COMPONENTS[node.kind]

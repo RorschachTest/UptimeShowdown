@@ -1,14 +1,16 @@
-import { chapter1 } from './chapter1'
-import { chapter2 } from './chapter2'
-import { chapter3 } from './chapter3'
-import { chapter4 } from './chapter4'
+import type { ChapterEntry } from './types'
+import { v1ch01 } from './vol1/ch01'
+import { v1ch02 } from './vol1/ch02'
+import { v1ch03 } from './vol1/ch03'
+import { v1ch04 } from './vol1/ch04'
 
-/** Playable levels, in menu order: ladder (staged builds), estimate (question desk), interview (the Chapter 3 shell). */
-export const LEVELS = [
-  { id: 'ch1', short: 'Ch 1', title: chapter1.title, kind: 'ladder', chapter: chapter1 },
-  { id: 'ch2', short: 'Ch 2', title: chapter2.title, kind: 'estimate', level: chapter2 },
-  { id: 'ch3', short: 'Ch 3', title: chapter3.title, kind: 'interview', level: chapter3 },
-  { id: 'ch4', short: 'Ch 4', title: chapter4.title, kind: 'interview', level: chapter4 },
-] as const
+export type { ChapterEntry, ChapterPlay } from './types'
 
-export type LevelId = (typeof LEVELS)[number]['id']
+/** The whole campaign, in book order. Adding a chapter = one file in vol1/ or vol2/ plus one line here. */
+export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04]
+
+export function chapterById(id: string): ChapterEntry {
+  const c = CHAPTERS.find((x) => x.id === id)
+  if (!c) throw new Error(`Unknown chapter ${id}`)
+  return c
+}

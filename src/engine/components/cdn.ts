@@ -27,5 +27,10 @@ export const cdn = defineComponent({
     },
   ],
   hitRate: (c) => HIT_RATE[c.cdnTtl],
+  // The edge is the first stop: users (or a front-door router) feed it, never a server or store.
+  placement: ({ parents }) =>
+    parents.some((p) => p !== 'traffic' && p !== 'lb' && p !== 'ratelimit')
+      ? 'A CDN belongs at the edge, between your users and your servers, not behind a server or store.'
+      : null,
   summary: ({ config }) => `${config.cdnTtl} TTL · ~${Math.round(HIT_RATE[config.cdnTtl] * 100)}% hits`,
 })
