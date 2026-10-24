@@ -15,6 +15,7 @@ const DOES: Record<Capability, string> = {
   deliver: 'delivers messages',
   fanout: 'fans posts out to feeds',
   feed: 'serves ready feeds',
+  suggest: 'suggests completions',
 }
 
 export interface PieceFlow {

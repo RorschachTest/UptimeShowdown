@@ -16,6 +16,7 @@ import { queue } from './queue'
 import { ratelimit } from './ratelimit'
 import { defineComponent, type ComponentDef, type CountSetting } from './shared'
 import { sqldb } from './sqldb'
+import { trie } from './trie'
 import { worker } from './worker'
 
 export * from './shared'
@@ -34,7 +35,7 @@ const traffic = defineComponent({
 })
 
 /** The catalogue. Adding a component = one new file here; the UI renders it from its definition. */
-export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader }
+export const COMPONENTS: Record<ComponentKind, ComponentDef> = { traffic, allinone, app, lb, sqldb, cache, cdn, ratelimit, kvstore, idgen, geoindex, leaderboard, queue, worker, provider, feed, frontier, downloader, trie }
 
 export const DEFAULT_CONFIG: NodeConfig = {
   tier: 0,
@@ -66,6 +67,11 @@ export const DEFAULT_CONFIG: NodeConfig = {
   crawlDepth: false,
   dlDns: false,
   dlDedupe: false,
+  trieTopK: false,
+  trieShard: 'letter',
+  trieBuild: 'live',
+  trieBrowserCache: false,
+  workSample: 'all',
 }
 
 export function serves(kind: ComponentKind, cap: Capability | undefined): boolean {

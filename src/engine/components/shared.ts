@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe' | 'fanoutMode' | 'crawlPolite' | 'crawlRobots' | 'crawlDepth' | 'dlDns' | 'dlDedupe'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict' | 'idScheme' | 'idClock' | 'geoIndex' | 'geoNeighbours' | 'boardStore' | 'boardShard' | 'boardReplica' | 'providerRetry' | 'providerDedupe' | 'fanoutMode' | 'crawlPolite' | 'crawlRobots' | 'crawlDepth' | 'dlDns' | 'dlDedupe' | 'trieTopK' | 'trieShard' | 'trieBuild' | 'trieBrowserCache' | 'workSample'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
