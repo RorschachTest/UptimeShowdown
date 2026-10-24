@@ -163,6 +163,12 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M3 10h18M16 14.5h2" />
     </>
   ),
+  matcher: (
+    <>
+      <path d="M4 8h10l-3-3M20 16H10l3 3" />
+      <path d="M18 5v6M6 13v6" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />
