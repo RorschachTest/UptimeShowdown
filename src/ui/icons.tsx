@@ -43,6 +43,13 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M12 18l4-5M8 18h.01M16 18h.01M12 10h.01" />
     </>
   ),
+  kvstore: (
+    <>
+      <ellipse cx="12" cy="5.5" rx="7" ry="2.5" />
+      <path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" />
+      <path d="M9 9.5h2M9 16h2" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

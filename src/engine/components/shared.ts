@@ -10,7 +10,7 @@ export interface OptionDef<V> extends Tradeoff {
   label: string
 }
 
-export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing'
+export type ChoiceField = 'tier' | 'readRouting' | 'cacheSize' | 'writeStrategy' | 'cdnTtl' | 'rlAlgorithm' | 'rlLimit' | 'rlCounters' | 'cacheHashing' | 'kvCopies' | 'kvWrite' | 'kvRead' | 'kvConflict'
 
 /** A pick-one setting, rendered as segmented buttons. */
 export interface ChoiceSetting<F extends ChoiceField = ChoiceField> {
@@ -127,6 +127,8 @@ export interface ComponentDef extends Tradeoff {
   review?: (node: SimNode, ctx: ReviewContext) => string[]
   /** A hard rule about where this piece may sit; returns the problem, or null when placed legally. */
   placement?: (ctx: PlacementContext) => string | null
+  /** A hard rule about this piece's own settings; returns the problem, or null when valid. */
+  validate?: (node: SimNode) => string | null
 }
 
 /** Vertical scaling: capacity doubles per size, cost rises faster (the "cost knee"). */
