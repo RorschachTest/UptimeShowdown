@@ -1,10 +1,10 @@
 // Core simulation types. Nothing in src/engine may import React, the DOM or UI libraries:
 // the engine has to run unchanged on a Node server later (multiplayer, M5).
 
-export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub' | 'blob'
+export type ComponentKind = 'traffic' | 'allinone' | 'app' | 'lb' | 'sqldb' | 'cache' | 'cdn' | 'ratelimit' | 'kvstore' | 'idgen' | 'geoindex' | 'leaderboard' | 'queue' | 'worker' | 'provider' | 'feed' | 'frontier' | 'downloader' | 'trie' | 'tsdb' | 'wsgateway' | 'pubsub' | 'blob' | 'blocksrv'
 
 /** What a component can do for a request. A request type lists the ones it needs, in order. */
-export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push' | 'publish' | 'blob'
+export type Capability = 'compute' | 'lookup' | 'write' | 'static' | 'id' | 'geo' | 'enqueue' | 'work' | 'deliver' | 'fanout' | 'feed' | 'suggest' | 'push' | 'publish' | 'blob' | 'chunk'
 
 export type Tier = 0 | 1 | 2 | 3
 export type ReadRouting = 'primary' | 'replicas' | 'ryw'
@@ -78,6 +78,8 @@ export interface NodeConfig {
   wsAssign: WsAssign
   pubsubHashing: PubsubHashing
   blobDurability: BlobDurability
+  blockDelta: boolean
+  blockCompress: boolean
 }
 
 export interface SimNode {

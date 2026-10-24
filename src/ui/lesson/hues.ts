@@ -42,4 +42,5 @@ export const KIND_HUE: Record<ComponentKind, Hue> = {
   wsgateway: 'blue',
   pubsub: 'yellow',
   blob: 'purple',
+  blocksrv: 'orange',
 }
