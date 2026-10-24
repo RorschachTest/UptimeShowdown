@@ -7,11 +7,12 @@ import { v1ch05 } from './vol1/ch05'
 import { v1ch06 } from './vol1/ch06'
 import { v1ch07 } from './vol1/ch07'
 import { v1ch08 } from './vol1/ch08'
+import { v2ch01 } from './vol2/ch01'
 
 export type { ChapterEntry, ChapterPlay } from './types'
 
 /** The whole campaign, in book order. Adding a chapter = one file in vol1/ or vol2/ plus one line here. */
-export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04, v1ch05, v1ch06, v1ch07, v1ch08]
+export const CHAPTERS: ChapterEntry[] = [v1ch01, v1ch02, v1ch03, v1ch04, v1ch05, v1ch06, v1ch07, v1ch08, v2ch01]
 
 export function chapterById(id: string): ChapterEntry {
   const c = CHAPTERS.find((x) => x.id === id)
