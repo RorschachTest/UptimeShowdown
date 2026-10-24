@@ -111,6 +111,8 @@ export interface ComponentDef extends Tradeoff {
   balances: boolean
   /** Users reach only one instance unless a router (balances) sits in front. */
   needsRouter: boolean
+  /** Passes on requests it doesn't serve (routers, caches). False for single-purpose services like an ID generator. */
+  relays: boolean
   /** Has a machine-size (tier) setting that scales capacity and cost. */
   tiered: boolean
   bound: Bottleneck
@@ -153,7 +155,7 @@ export const tierSetting: ChoiceSetting<'tier'> = {
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US')
 
-type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'needsRouter' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
+type Defaults = 'maxUtil' | 'queueTicks' | 'partial' | 'edge' | 'balances' | 'needsRouter' | 'relays' | 'tiered' | 'bound' | 'choices' | 'actions' | 'summary' | 'cost'
 
 /** Fill in the common defaults so each component file only states what's special about it. */
 export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick<ComponentDef, Defaults>>): ComponentDef {
@@ -164,6 +166,7 @@ export function defineComponent(def: Omit<ComponentDef, Defaults> & Partial<Pick
     edge: false,
     balances: false,
     needsRouter: false,
+    relays: true,
     tiered: false,
     bound: 'compute',
     choices: [],
