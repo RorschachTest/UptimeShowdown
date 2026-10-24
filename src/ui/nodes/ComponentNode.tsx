@@ -14,6 +14,8 @@ const MAX_STACKED_COPIES = 4
 /** Every placeable piece, drawn from its component definition: summary, gauge, scale-out copies. */
 export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
   const stats = useGameStore((s) => s.sim.nodeStats[id])
+  // Cluster pieces track live members once nodes join or leave mid-run.
+  const live = useGameStore((s) => s.sim.runtime[id]?.state?.live)
   const def = COMPONENTS[data.kind]
   const count = def.count
   const countOpen = useGameStore((s) => count !== undefined && isUnlocked(s.chapter, count.gate, s.stageIndex))
@@ -77,6 +79,13 @@ export function ComponentNode({ id, data, selected }: NodeProps<GameNode>) {
           </span>
           <span className="text-ink-soft">{stats && !down ? fmtMs(stats.latencyMs) : '–'}</span>
         </div>
+
+        {stats?.hitRate !== undefined && !down && (
+          <div className="mt-1 flex justify-between text-xs text-ink-soft">
+            <span>{Math.round(stats.hitRate * 100)}% hits</span>
+            {live !== undefined && live !== value && <span className="font-semibold text-ink">{live} nodes live</span>}
+          </div>
+        )}
 
         {(showQueue || (dropping && !down)) && (
           <div className="mt-1 flex justify-between text-xs">

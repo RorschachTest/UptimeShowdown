@@ -11,6 +11,7 @@ export const FACT_LABELS: Record<FactId, string> = {
   abuse: 'Abusers',
   clients: 'Real users',
   growth: 'Growth',
+  data: 'Data',
 }
 
 /** The revealed short answer for a fact, or null while it's still unknown. */

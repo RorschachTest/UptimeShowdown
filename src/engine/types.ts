@@ -14,6 +14,7 @@ export type CdnTtl = 'long' | 'short'
 export type RlAlgorithm = 'token' | 'leaky' | 'fixed' | 'slidingLog' | 'slidingCounter'
 export type RlLimit = 'low' | 'medium' | 'high'
 export type RlCounters = 'local' | 'shared'
+export type CacheHashing = 'mod' | 'ring' | 'vnodes'
 
 /** Player settings. Every node carries all of them; each kind reads only its own. */
 export interface NodeConfig {
@@ -26,6 +27,7 @@ export interface NodeConfig {
   rlAlgorithm: RlAlgorithm
   rlLimit: RlLimit
   rlCounters: RlCounters
+  cacheHashing: CacheHashing
 }
 
 export interface SimNode {
@@ -68,15 +70,19 @@ export interface TrafficPoint {
   rps: number
 }
 
-export interface CrashEvent {
+/** Something that happens to a piece during a run. It targets the first node of `target` kind (topological order). */
+export interface SimEvent {
   t: number
-  durationS: number
-  kind: 'crash'
-  /** The first node of this kind (in topological order) loses one instance. */
+  /** crash: one instance down for durationS. nodeLeave / nodeJoin: a cluster member leaves or joins at t. */
+  kind: 'crash' | 'nodeLeave' | 'nodeJoin' | 'partition' | 'clockSkew'
   target: ComponentKind
+  durationS?: number
 }
 
-export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting'
+/** Kept for older level data; every event is a SimEvent. */
+export type CrashEvent = SimEvent
+
+export type SettingId = 'split' | 'tier' | 'replicas' | 'readRouting' | 'cacheNodes' | 'hashing'
 
 export interface Stage {
   id: string
@@ -90,7 +96,9 @@ export interface Stage {
   clients?: Record<string, number>
   /** What this stage newly unlocks (cumulative with earlier stages). */
   unlocks: { kinds: ComponentKind[]; settings: SettingId[] }
-  events: CrashEvent[]
+  events: SimEvent[]
+  /** Size of the data a cache must hold to answer reads (GB). Unset: cache hit rate comes from its memory size alone. */
+  workingSetGb?: number
   /** Max spend per minute for ★★. */
   budget: number
   /** Cost of the known-good design; ★★★ needs cost ≤ 1.5× this. */
@@ -103,6 +111,8 @@ export interface Stage {
     maxBotServedRate?: number
     /** Max share of real-user requests the rate limiter may reject. */
     maxThrottledRate?: number
+    /** Max count of each correctness violation over the run (see Chapter.violationLabels). */
+    maxViolations?: Record<string, number>
   }
 }
 
@@ -123,6 +133,8 @@ export interface Chapter {
   stages: Stage[]
   seed: number
   rules?: LevelRules
+  /** Human names for violation ids this chapter scores, e.g. { duplicateId: 'duplicate IDs' }. */
+  violationLabels?: Record<string, string>
 }
 
 /** A batch of requests of one type at one step of its needs, with their average latency so far. */
@@ -136,6 +148,8 @@ export type Flows = Record<string, Packet>
 
 export interface NodeRuntime {
   queue: Flows
+  /** Per-component state carried between ticks (e.g. a cache's warmth, live cluster size). */
+  state?: Record<string, number>
 }
 
 /** What a node did in the last tick, for the HUD, node colouring and diagnosis. */
@@ -168,6 +182,8 @@ export interface TickStats {
   /** Abusive requests that were served (bad) or stopped anywhere (good). Not in success/errors. */
   botServed: number
   botStopped: number
+  /** Correctness violations by id (duplicates, lost writes, …), counted per request. */
+  violations: Record<string, number>
   latencyHist: number[]
 }
 
@@ -196,7 +212,7 @@ export interface SimState {
 // ── Interview levels (Chapter 3 shell, reused by later problem chapters) ──
 
 /** A hidden parameter of the problem, shown as "?" until a question reveals it. */
-export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth'
+export type FactId = 'scale' | 'mix' | 'geography' | 'freshness' | 'failures' | 'latency' | 'abuse' | 'clients' | 'growth' | 'data'
 
 export interface QuestionCard {
   id: string

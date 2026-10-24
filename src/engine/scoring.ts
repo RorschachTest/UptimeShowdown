@@ -21,8 +21,15 @@ export function emptyStats(): TickStats {
     throttled: 0,
     botServed: 0,
     botStopped: 0,
+    violations: {},
     latencyHist: new Array<number>(LATENCY_BUCKETS.length).fill(0),
   }
+}
+
+export function mergeCounts(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const out = { ...a }
+  for (const [k, v] of Object.entries(b)) out[k] = (out[k] ?? 0) + v
+  return out
 }
 
 export function addStats(a: TickStats, b: TickStats): TickStats {
@@ -35,6 +42,7 @@ export function addStats(a: TickStats, b: TickStats): TickStats {
     throttled: a.throttled + b.throttled,
     botServed: a.botServed + b.botServed,
     botStopped: a.botStopped + b.botStopped,
+    violations: mergeCounts(a.violations, b.violations),
     latencyHist: a.latencyHist.map((v, i) => v + (b.latencyHist[i] ?? 0)),
   }
 }
@@ -72,6 +80,8 @@ export interface Metrics {
   throttledRate: number
   /** Share of abusive requests that got served. */
   botServedRate: number
+  /** Correctness violations by id over the window or run. */
+  violations: Record<string, number>
 }
 
 export function metricsOf(sum: TickStats, ticks: number): Metrics {
@@ -88,6 +98,7 @@ export function metricsOf(sum: TickStats, ticks: number): Metrics {
     staleRate: sum.success > 0 ? sum.stale / sum.success : 0,
     throttledRate: finished > 0 ? sum.throttled / finished : 0,
     botServedRate: sum.botServed + sum.botStopped > 0 ? sum.botServed / (sum.botServed + sum.botStopped) : 0,
+    violations: sum.violations,
   }
 }
 
@@ -122,6 +133,10 @@ export function stageResult(state: SimState): StageResult {
     missed.push(`${(metrics.staleRate * 100).toFixed(1)}% of answers were stale (users didn't see their own writes)`)
   if (goals.maxThrottledRate !== undefined && metrics.throttledRate > goals.maxThrottledRate)
     missed.push(`${(metrics.throttledRate * 100).toFixed(1)}% of real users' requests were rate-limited`)
+  for (const [id, max] of Object.entries(goals.maxViolations ?? {})) {
+    const n = Math.round(metrics.violations[id] ?? 0)
+    if (n > max) missed.push(`${n.toLocaleString('en-US')} ${state.chapter.violationLabels?.[id] ?? id}`)
+  }
   if (goals.maxBotServedRate !== undefined && metrics.botServedRate > goals.maxBotServedRate)
     missed.push(`${(metrics.botServedRate * 100).toFixed(1)}% of scraper requests got through (limit ${goals.maxBotServedRate * 100}%)`)
   const goalsMet = missed.length === 0
