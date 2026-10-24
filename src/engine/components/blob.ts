@@ -12,6 +12,9 @@ const OVERHEAD: Record<BlobDurability, number> = { single: 1, replicas: 3, erasu
 const ERASURE_MS = 15
 const DEGRADED_READ = 1.5
 const DEFAULT_MB = 0.01
+/** An edit usually changes one block of a file; compression shrinks typical documents by ~40%. */
+const DELTA_SHARE = 0.1
+const COMPRESSED = 0.6
 
 /** Object storage: big immutable files (videos, photos, tiles, file blocks), limited by disk and bandwidth. */
 export const blob = defineComponent({
@@ -48,15 +51,19 @@ export const blob = defineComponent({
   summary: ({ instances, config }) =>
     `${instances} node${instances > 1 ? 's' : ''} · ${fmtInt((instances * NODE_GB) / 1000 / OVERHEAD[config.blobDurability])} TB usable · ${fmtInt(instances * NODE_MBPS)} MB/s`,
   review: ({ config }) => (config.blobDurability === 'single' ? ['One copy of each object: a failed disk loses data permanently.'] : []),
-  serve: (node, { instances, inflow, chapter, stage, fired, active }) => {
+  serve: (node, { instances, inflow, chapter, stage, fired, active, parents }) => {
     const d = node.config.blobDurability
     const degraded = d === 'erasure' && active.some((e) => e.kind === 'crash') ? DEGRADED_READ : 1
     const isWrite = (k: string) => chapter.requestTypes[parseKey(k)[0]]!.bytes === 'in'
+    // Block servers upstream shrink what reaches us: only changed blocks on upload, compressed both ways.
+    const blocks = parents.find((p) => p.kind === 'blocksrv')?.config
+    const bytesOf = (k: string) =>
+      (isWrite(k) && blocks?.blockDelta ? DELTA_SHARE : 1) * (blocks?.blockCompress ? COMPRESSED : 1)
     // Disk: the stored data times the durability overhead must fit; new writes fail when it doesn't.
     const ws = stage.workingSetGb ?? 0
     const fits = ws > 0 ? Math.min(1, (instances * NODE_GB) / (ws * OVERHEAD[d])) : 1
     let mb = 0
-    for (const [k, p] of Object.entries(inflow)) mb += p.count * (chapter.requestTypes[parseKey(k)[0]]!.sizeMb ?? DEFAULT_MB) * (isWrite(k) ? 1 : degraded)
+    for (const [k, p] of Object.entries(inflow)) mb += p.count * (chapter.requestTypes[parseKey(k)[0]]!.sizeMb ?? DEFAULT_MB) * bytesOf(k) * (isWrite(k) ? 1 : degraded)
     const cap = (NODE_MBPS * instances) / TICKS_PER_SEC
     const load = mb / cap
     const scale = load > 1 ? 1 / load : 1

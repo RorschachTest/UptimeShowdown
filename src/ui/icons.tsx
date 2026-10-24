@@ -136,6 +136,14 @@ const paths: Record<ComponentKind, React.ReactNode> = {
       <path d="M4 7v10l8 4 8-4V7M12 11v10" />
     </>
   ),
+  blocksrv: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="4" width="7" height="7" rx="1" />
+      <rect x="4" y="13" width="7" height="7" rx="1" />
+      <path d="M13 16.5h7M16.5 13v7" />
+    </>
+  ),
   cdn: (
     <>
       <circle cx="12" cy="12" r="8.5" />

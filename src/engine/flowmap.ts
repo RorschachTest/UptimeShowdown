@@ -19,6 +19,7 @@ const DOES: Record<Capability, string> = {
   push: 'holds the live connection',
   publish: 'publishes to subscribers',
   blob: 'stores the bytes',
+  chunk: 'splits files into blocks',
 }
 
 export interface PieceFlow {
